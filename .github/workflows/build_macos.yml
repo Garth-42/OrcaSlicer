@@ -3,6 +3,10 @@ name: Build macOS (arm64)
 on:
   workflow_dispatch: # allows for manual dispatch
     inputs:
+      ref:
+        description: 'Tag, branch, or SHA to build (defaults to the dispatching branch)'
+        type: string
+        default: ''
       build-deps-only:
         description: 'Only build dependencies (bypasses caching)'
         type: boolean
@@ -21,5 +25,6 @@ jobs:
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-14' }}
       arch: arm64
+      ref: ${{ inputs.ref }}
       build-deps-only: ${{ inputs.build-deps-only || false }}
     secrets: inherit

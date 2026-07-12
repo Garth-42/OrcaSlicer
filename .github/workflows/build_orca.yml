@@ -13,6 +13,11 @@ on:
         arch:
           required: false
           type: string
+        # Tag, branch, or SHA to build; empty checks out the triggering commit.
+        ref:
+          required: false
+          type: string
+          default: ''
         macos-combine-only:
           required: false
           type: boolean
@@ -39,6 +44,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.ref }}
           lfs: 'false'
 
       - name: load cached deps
