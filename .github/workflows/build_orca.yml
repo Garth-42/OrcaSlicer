@@ -139,10 +139,18 @@ jobs:
       - name: Free disk space
         if: runner.os == 'macOS' && !inputs.macos-combine-only && !vars.SELF_HOSTED
         run: |
-          df -hI /dev/disk3s1s1
-          sudo find /Applications -maxdepth 1 -type d -name "Xcode_*.app" ! -name "Xcode_15.4.app" -exec rm -rf {} +
+          df -hI /
+          # Deleting unused Xcodes takes minutes, so only do it when the build might not fit.
+          avail_gib=$(df -g / | awk 'NR == 2 { print $4 }')
+          if [ "$avail_gib" -ge 15 ]; then
+            echo "$avail_gib GiB free, enough for the build"
+            exit 0
+          fi
+          # Keep the selected Xcode and remove only other installed versions.
+          xcode=$(basename "$(cd "$(xcode-select -p)/../.." && pwd -P)")
+          sudo find /Applications -maxdepth 1 -type d -name "Xcode_*.app" ! -name "$xcode" -exec rm -rf {} +
           sudo rm -rf ~/Library/Developer/CoreSimulator/Caches/*
-          df -hI /dev/disk3s1s1
+          df -hI /
 
       - name: Build slicer mac
         if: runner.os == 'macOS' && !inputs.macos-combine-only
@@ -151,7 +159,7 @@ jobs:
         env:
           ORCA_TESTS_BUILD_ONLY: ${{ inputs.arch == 'arm64' && '1' || '' }}
         run: |
-          ./build_release_macos.sh -s -n -x ${{ !vars.SELF_HOSTED && '-1' || '' }} -a ${{ inputs.arch }} -t 10.15 ${{ inputs.arch == 'arm64' && '-T' || '' }}
+          ./build_release_macos.sh -s -n -x ${{ !vars.SELF_HOSTED && '-j 3' || '' }} -a ${{ inputs.arch }} -t 10.15 ${{ inputs.arch == 'arm64' && '-T' || '' }}
 
       - name: Pack unit tests mac
         if: runner.os == 'macOS' && !inputs.macos-combine-only && inputs.arch == 'arm64'
@@ -202,7 +210,7 @@ jobs:
         if: runner.os == 'macOS' && inputs.macos-combine-only
         working-directory: ${{ github.workspace }}
         run: |
-          ./build_release_macos.sh -u -x ${{ !vars.SELF_HOSTED && '-1' || '' }} -a universal -t 10.15
+          ./build_release_macos.sh -u -x ${{ !vars.SELF_HOSTED && '-j 3' || '' }} -a universal -t 10.15
 
  # Thanks to RaySajuuk, it's working now
       - name: Sign app and notary
