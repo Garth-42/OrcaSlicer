@@ -24,7 +24,7 @@ jobs:
           lfs: false
       - uses: actions/cache/restore@v6
         with:
-          path: deps/build/arm64
+          path: ${{ github.workspace }}/deps/build/arm64
           key: macos-arm64-cache-orcaslicer_deps-build-51e57205fad8087444b7b68732f2176cce97d2e47622e11bad733d0d02845b5b
           fail-on-cache-miss: true
       - uses: lukka/get-cmake@latest
@@ -71,7 +71,7 @@ jobs:
       - name: Check changed C++ includes and style
         run: scripts/run_clang_tidy.sh --base 2df6f4b4 --no-fetch --yes --jobs 3 > validation-results/clang-tidy.log 2>&1
       - name: Package review app and test executables
-        if: always()
+        if: ${{ always() && hashFiles('build/arm64/OrcaSlicer/OrcaSlicer.app/Contents/MacOS/OrcaSlicer') != '' }}
         run: |
           ditto -c -k --sequesterRsrc --keepParent build/arm64/OrcaSlicer/OrcaSlicer.app cad-selection-macos-app.zip
           tar -czf cad-selection-macos-tests.tgz -C build/arm64/tests slic3rutils/Release/slic3rutils_tests.app libslic3r/Release/libslic3r_tests.app
