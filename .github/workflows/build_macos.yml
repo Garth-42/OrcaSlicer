@@ -1,0 +1,113 @@
+name: CAD selection validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        type: choice
+        options: [macOS, Windows-and-Linux]
+        default: macOS
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  macos:
+    if: inputs.stage == 'macOS'
+    runs-on: macos-15
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          lfs: false
+      - uses: actions/cache/restore@v6
+        with:
+          path: deps/build/arm64
+          key: macos-arm64-cache-orcaslicer_deps-build-51e57205fad8087444b7b68732f2176cce97d2e47622e11bad733d0d02845b5b
+          fail-on-cache-miss: true
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: '~4.3.0'
+      - name: Build macOS Release app and tests
+        env:
+          ORCA_TESTS_BUILD_ONLY: '1'
+        run: ./build_release_macos.sh -s -n -x -j 3 -a arm64 -t 10.15 -T
+      - name: Run CAD and plugin regressions
+        run: |
+          mkdir -p validation-results
+          ctest --test-dir build/arm64/tests -C Release -L 'CadDocument|CadFaceSelection|PluginCadGeometry|DesignSketchTool|PluginLifecycle' -LE NotWorking --no-tests=error --output-on-failure --output-junit "$PWD/validation-results/cad-tests.xml" -j 3
+      - name: Verify shutdown and placement tests detect the defects
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/slic3r/plugin/PluginManager.cpp')
+          text = path.read_text()
+          assert text.count('    PluginHostCad::initialize();') == 1
+          path.write_text(text.replace('    PluginHostCad::initialize();', '    // Deliberately restore the shutdown defect for this regression check.'))
+          path = Path('src/libslic3r/CAD/CadDocument.cpp')
+          text = path.read_text()
+          text = text.replace('Snapshot{features, variables, body_transforms}', 'Snapshot{features, variables}')
+          text = text.replace('Snapshot{std::move(features), std::move(variables), std::move(body_transforms)}', 'Snapshot{std::move(features), std::move(variables)}')
+          text = text.replace('    body_transforms = std::move(m_undo.back().body_transforms);\n', '')
+          text = text.replace('    body_transforms = std::move(m_redo.back().body_transforms);\n', '')
+          path.write_text(text)
+          PY
+          cmake --build build/arm64 --config Release --target slic3rutils_tests libslic3r_tests --parallel 3
+          set +e
+          build/arm64/tests/slic3rutils/Release/slic3rutils_tests.app/Contents/MacOS/slic3rutils_tests 'Unloaded CAD plugin entries survive process finalization' > validation-results/shutdown-defect.log 2>&1
+          shutdown_status=$?
+          build/arm64/tests/libslic3r/Release/libslic3r_tests.app/Contents/MacOS/libslic3r_tests 'Undo and redo restore body placements alongside feature edits' > validation-results/placement-defect.log 2>&1
+          placement_status=$?
+          set -e
+          echo "Shutdown without fix: $shutdown_status; placement history without fix: $placement_status" | tee validation-results/defect-exit-status.txt
+          git restore -- src/slic3r/plugin/PluginManager.cpp src/libslic3r/CAD/CadDocument.cpp
+          cmake --build build/arm64 --config Release --target slic3rutils_tests libslic3r_tests --parallel 3
+          ctest --test-dir build/arm64/tests -C Release -R 'Unloaded CAD plugin entries|Undo and redo restore body placements|A new placement invalidates|Native CAD edge removal' --no-tests=error --output-on-failure --output-junit "$PWD/validation-results/fixed-tests.xml"
+          test "$shutdown_status" -ne 0
+          test "$placement_status" -ne 0
+      - name: Check changed C++ includes and style
+        run: scripts/run_clang_tidy.sh --base 2df6f4b4 --no-fetch --yes --jobs 3 > validation-results/clang-tidy.log 2>&1
+      - name: Package review app and test executables
+        if: always()
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent build/arm64/OrcaSlicer/OrcaSlicer.app cad-selection-macos-app.zip
+          tar -czf cad-selection-macos-tests.tgz -C build/arm64/tests slic3rutils/Release/slic3rutils_tests.app libslic3r/Release/libslic3r_tests.app
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: cad-selection-validation-${{ github.sha }}
+          path: |
+            cad-selection-macos-app.zip
+            cad-selection-macos-tests.tgz
+            validation-results
+            build/arm64/tests/Testing/Temporary/LastTest.log
+          retention-days: 7
+  linux:
+    if: inputs.stage == 'Windows-and-Linux'
+    uses: ./.github/workflows/build_check_cache.yml
+    with:
+      os: ubuntu-24.04
+    secrets: inherit
+  windows:
+    if: inputs.stage == 'Windows-and-Linux'
+    uses: ./.github/workflows/build_check_cache.yml
+    with:
+      os: windows-latest
+      arch: x64
+      compiler: clang
+    secrets: inherit
+  linux_tests:
+    needs: linux
+    uses: ./.github/workflows/unit_tests.yml
+    with:
+      os: ubuntu-24.04
+      artifact: ${{ github.sha }}-tests-linux-x86_64
+  windows_tests:
+    needs: windows
+    uses: ./.github/workflows/unit_tests.yml
+    with:
+      os: windows-latest
+      artifact: ${{ github.sha }}-tests-windows-x64
