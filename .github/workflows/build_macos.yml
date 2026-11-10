@@ -5,7 +5,7 @@ on:
     inputs:
       stage:
         type: choice
-        options: [macOS, Windows-and-Linux]
+        options: [macOS, macOS-analysis, Windows-and-Linux]
         default: macOS
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   macos:
-    if: inputs.stage == 'macOS'
+    if: inputs.stage == 'macOS' || inputs.stage == 'macOS-analysis'
     runs-on: macos-15
     timeout-minutes: 120
     steps:
@@ -31,14 +31,17 @@ jobs:
         with:
           cmakeVersion: '~4.3.0'
       - name: Build macOS Release app and tests
+        if: inputs.stage == 'macOS'
         env:
           ORCA_TESTS_BUILD_ONLY: '1'
         run: ./build_release_macos.sh -s -n -x -j 3 -a arm64 -t 10.15 -T
       - name: Run CAD and plugin regressions
+        if: inputs.stage == 'macOS'
         run: |
           mkdir -p validation-results
           ctest --test-dir build/arm64/tests -C Release -L 'CadDocument|CadFaceSelection|PluginCadGeometry|DesignSketchTool|PluginLifecycle' -LE NotWorking --no-tests=error --output-on-failure --output-junit "$PWD/validation-results/cad-tests.xml" -j 3
       - name: Verify shutdown and placement tests detect the defects
+        if: inputs.stage == 'macOS'
         shell: bash
         run: |
           python3 - <<'PY'
@@ -69,7 +72,16 @@ jobs:
           test "$shutdown_status" -ne 0
           test "$placement_status" -ne 0
       - name: Check changed C++ includes and style
-        run: scripts/run_clang_tidy.sh --base 2df6f4b4 --no-fetch --yes --jobs 3 > validation-results/clang-tidy.log 2>&1
+        run: |
+          mkdir -p validation-results
+          # The cached Boost iostreams was built with Homebrew's XZ headers. The analysis
+          # configure deliberately excludes Homebrew from automatic dependency discovery.
+          cmake -S . -B build-tidy -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSLIC3R_PCH=OFF -DORCA_TOOLS=ON -DBUILD_TESTS=ON \
+            -DDEP_BUILD_DIR="$PWD/deps/build/arm64" -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            '-DCMAKE_IGNORE_PREFIX_PATH=/opt/local;/usr/local;/opt/homebrew' \
+            -DLIBLZMA_INCLUDE_DIR="$(brew --prefix xz)/include" > validation-results/analysis-configure.log 2>&1
+          scripts/run_clang_tidy.sh --base 2df6f4b4 --no-fetch --yes --jobs 3 > validation-results/clang-tidy.log 2>&1
       - name: Package review app and test executables
         if: ${{ always() && hashFiles('build/arm64/OrcaSlicer/OrcaSlicer.app/Contents/MacOS/OrcaSlicer') != '' }}
         run: |
