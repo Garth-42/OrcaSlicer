@@ -1,0 +1,412 @@
+[
+  {
+    "kind": "face",
+    "body_index": 0,
+    "face_index": 0,
+    "edge_index": -1,
+    "vertex_index": -1,
+    "edge_indices": [],
+    "selection_revision": 2,
+    "body_to_design": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "shape_type": "Face",
+    "orientation": "forward",
+    "surface_type": "plane",
+    "area": 4399.999999999999,
+    "centroid": [
+      0.0,
+      -1.962066872610277e-15,
+      20.0
+    ],
+    "uv_bounds": [
+      0.0,
+      80.0,
+      0.0,
+      60.0
+    ],
+    "periodic": [
+      false,
+      false
+    ],
+    "frame": {
+      "origin": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "x_axis": [
+        1.0,
+        0.0,
+        -0.0
+      ],
+      "y_axis": [
+        -0.0,
+        1.0,
+        0.0
+      ],
+      "normal": [
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "loops": [
+      {
+        "is_outer": true,
+        "is_complete": true,
+        "edges": [
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          }
+        ]
+      },
+      {
+        "is_outer": false,
+        "is_complete": true,
+        "edges": [
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          }
+        ]
+      }
+    ]
+  },
+  null,
+  {
+    "kind": "edge",
+    "body_index": 0,
+    "face_index": -1,
+    "edge_index": 3,
+    "vertex_index": -1,
+    "edge_indices": [
+      3
+    ],
+    "selection_revision": 4,
+    "body_to_design": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "shape_type": "Edge",
+    "orientation": "forward",
+    "curve_type": "line",
+    "parameter_range": [
+      0.0,
+      60.0
+    ],
+    "sample_points": [
+      [
+        -40.0,
+        30.0,
+        20.0
+      ],
+      [
+        -40.0,
+        22.5,
+        20.0
+      ],
+      [
+        -40.0,
+        15.0,
+        20.0
+      ],
+      [
+        -40.0,
+        7.5,
+        20.0
+      ],
+      [
+        -40.0,
+        0.0,
+        20.0
+      ],
+      [
+        -40.0,
+        -7.5,
+        20.0
+      ],
+      [
+        -40.0,
+        -15.0,
+        20.0
+      ],
+      [
+        -40.0,
+        -22.5,
+        20.0
+      ],
+      [
+        -40.0,
+        -30.0,
+        20.0
+      ]
+    ]
+  },
+  {
+    "kind": "vertex",
+    "body_index": 0,
+    "face_index": -1,
+    "edge_index": -1,
+    "vertex_index": 3,
+    "edge_indices": [],
+    "selection_revision": 5,
+    "body_to_design": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "shape_type": "Vertex",
+    "orientation": "reversed",
+    "point": [
+      -40.0,
+      30.0,
+      20.0
+    ]
+  },
+  {
+    "kind": "face",
+    "body_index": 0,
+    "face_index": 0,
+    "edge_index": -1,
+    "vertex_index": -1,
+    "edge_indices": [],
+    "selection_revision": 6,
+    "body_to_design": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "shape_type": "Face",
+    "orientation": "forward",
+    "surface_type": "plane",
+    "area": 4399.999999999999,
+    "centroid": [
+      0.0,
+      -1.962066872610277e-15,
+      20.0
+    ],
+    "uv_bounds": [
+      0.0,
+      80.0,
+      0.0,
+      60.0
+    ],
+    "periodic": [
+      false,
+      false
+    ],
+    "frame": {
+      "origin": [
+        0.0,
+        0.0,
+        20.0
+      ],
+      "x_axis": [
+        1.0,
+        0.0,
+        -0.0
+      ],
+      "y_axis": [
+        -0.0,
+        1.0,
+        0.0
+      ],
+      "normal": [
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    "loops": [
+      {
+        "is_outer": true,
+        "is_complete": true,
+        "edges": [
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          }
+        ]
+      },
+      {
+        "is_outer": false,
+        "is_complete": true,
+        "edges": [
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          },
+          {
+            "curve_type": "line",
+            "orientation": "forward",
+            "is_seam": false,
+            "is_degenerate": false
+          }
+        ]
+      }
+    ]
+  }
+]

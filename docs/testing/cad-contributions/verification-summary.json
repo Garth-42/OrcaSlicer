@@ -1,0 +1,145 @@
+{
+  "base": "d76276778c1879373eef4f49055b685fba8d41be",
+  "api_branch": "codex/cad-selection-api",
+  "api_commit": "4de48d5209a63674c44096046632761811889e97",
+  "placement_branch": "codex/cad-placement-undo",
+  "placement_commit": "b9193e6c5fdee283d91c7c0780a8d48428f4b2b8",
+  "combined_tree": "f59b22c4672ba074dae08f7f99062b4947a67752",
+  "combine_conflicts": false,
+  "differences_from_pre_split": [
+    "docs/HLSD/cad-face-plugin-api.md",
+    "docs/HLSD/design-tab.md",
+    "src/slic3r/GUI/CAD/DesignPanel.cpp",
+    "src/slic3r/plugin/host/PluginHostCadGeometry.cpp",
+    "tests/slic3rutils/test_plugin_cad_geometry.cpp"
+  ],
+  "difference_reason": "The combined production logic is unchanged. Differences are documentation/comment wording and two direct pybind11 includes found by the full contribution check.",
+  "api_changed_files": [
+    "docs/HLSD/cad-face-plugin-api.md",
+    "sandboxes/orca_cad_face_selection_plugin_any.py",
+    "src/libslic3r/CAD/CadShape.cpp",
+    "src/libslic3r/CAD/CadShape.hpp",
+    "src/libslic3r/CMakeLists.txt",
+    "src/slic3r/CMakeLists.txt",
+    "src/slic3r/GUI/CAD/CadFaceSelection.hpp",
+    "src/slic3r/GUI/CAD/CadShapeSelection.hpp",
+    "src/slic3r/GUI/CAD/DesignCanvas.cpp",
+    "src/slic3r/GUI/CAD/DesignSketchTool.cpp",
+    "src/slic3r/GUI/CAD/DesignSketchTool.hpp",
+    "src/slic3r/plugin/PluginLoader.cpp",
+    "src/slic3r/plugin/PluginManager.cpp",
+    "src/slic3r/plugin/host/CadFaceSelectionState.hpp",
+    "src/slic3r/plugin/host/PluginHost.cpp",
+    "src/slic3r/plugin/host/PluginHostCad.cpp",
+    "src/slic3r/plugin/host/PluginHostCad.hpp",
+    "src/slic3r/plugin/host/PluginHostCadGeometry.cpp",
+    "tests/libslic3r/CMakeLists.txt",
+    "tests/libslic3r/test_cad_shape.cpp",
+    "tests/slic3rutils/CMakeLists.txt",
+    "tests/slic3rutils/test_cad_face_selection.cpp",
+    "tests/slic3rutils/test_design_sketch_tool.cpp",
+    "tests/slic3rutils/test_plugin_cad_geometry.cpp",
+    "tests/slic3rutils/test_plugin_host_api.cpp",
+    "tests/slic3rutils/test_plugin_lifecycle.cpp"
+  ],
+  "api_upstream_merge_check": {
+    "result": "pass",
+    "output": "f80350a48c716161463c7702abf2feeafee84fa5"
+  },
+  "placement_changed_files": [
+    "docs/HLSD/design-tab.md",
+    "src/libslic3r/CAD/CadDocument.cpp",
+    "src/libslic3r/CAD/CadDocument.hpp",
+    "src/slic3r/GUI/CAD/DesignPanel.cpp",
+    "src/slic3r/GUI/CAD/DesignPanel.hpp",
+    "tests/libslic3r/test_caddocument.cpp"
+  ],
+  "placement_upstream_merge_check": {
+    "result": "pass",
+    "output": "b69a4df6e6227d3ebb09a74e377858a0d8986732"
+  },
+  "checks_run": "https://github.com/Garth-42/OrcaSlicer/actions/runs/42957119565",
+  "release_run": "https://github.com/Garth-42/OrcaSlicer/actions/runs/42957716231",
+  "full_code_checks": {
+    "api": {
+      "result": "pass",
+      "cpp_files": 20,
+      "source_commit": "4de48d5209a63674c44096046632761811889e97"
+    },
+    "placement": {
+      "result": "pass",
+      "cpp_files": 5,
+      "source_commit": "b9193e6c5fdee283d91c7c0780a8d48428f4b2b8"
+    },
+    "run_id": 42957119565,
+    "evidence_dir": "split-checks-final"
+  },
+  "release_validation": {
+    "run_id": 42957716231,
+    "status": "success",
+    "results": {
+      "api": {
+        "source_commit": "4de48d5209a63674c44096046632761811889e97",
+        "result": "pass",
+        "tests": 328,
+        "failures": 0,
+        "skipped": 0,
+        "defect_restoration": "Without fix: 134; expected: 134",
+        "restored_fix": "pass"
+      },
+      "placement": {
+        "source_commit": "b9193e6c5fdee283d91c7c0780a8d48428f4b2b8",
+        "result": "pass",
+        "tests": 262,
+        "failures": 0,
+        "skipped": 0,
+        "defect_restoration": "Without fix: 42; expected: 42",
+        "restored_fix": "pass"
+      }
+    }
+  },
+  "review_copy_metadata": "Local screenshot app copies use unique bundle identifiers/display names to distinguish them in computer use. Executable SHA-256 hashes are unchanged; release archives are unmodified.",
+  "placement_desktop": {
+    "result": "pass",
+    "normal_exit": 0,
+    "checks": [
+      "Confirmed rotation undo",
+      "Rotation redo",
+      "Cancelled preview and unchanged confirmation add no undo step",
+      "Deletion undo restores rotated body"
+    ],
+    "focus_note": "After clicking the row trash control, focus moved into the Variables grid. Undo restored the body once the viewport was focused.",
+    "screenshots": [
+      "placement-before-undo.jpg",
+      "placement-after-undo.jpg",
+      "placement-deletion-undo.jpg"
+    ]
+  },
+  "api_desktop": {
+    "result": "pass",
+    "normal_exit": 0,
+    "source_commit": "4de48d5209a63674c44096046632761811889e97",
+    "checks": [
+      "Top face area 4400 mm2; centroid (0, 0, 20)",
+      "One complete outer loop and one complete inner loop, four line edges each",
+      "Native edge to vertex to face transition; inactive fields clear",
+      "Selection revisions 4, 5, 6",
+      "Quit while inspector subscription active"
+    ],
+    "selection_records": "api-focused-selection-records.json",
+    "screenshots": [
+      "api-selected-face.jpg",
+      "api-face-area.jpg",
+      "api-boundary-loops.jpg",
+      "api-vertex-fields.jpg",
+      "api-face-clears-vertex.jpg"
+    ]
+  },
+  "test_scope": {
+    "api_labels": "CadDocument|CadShape|CadFaceSelection|PluginCadGeometry|DesignSketchTool|PluginLifecycle|PluginHost",
+    "placement_labels": "CadDocument|DesignSketchTool",
+    "excluded_label": "NotWorking",
+    "entire_repository_ctest_run": false
+  },
+  "upstream_checked_commit": "96967976388838e9aa16eca72db5afb22ebacb94"
+}

@@ -1,0 +1,159 @@
+{
+  "capture_policy": "Raw computer-use captures; no cropping, annotation or retouching.",
+  "screenshots": [
+    {
+      "file": "placement-before-undo.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "4e524bdd1278ce1ddf54e8d01e3479dc5ba54363545d49141865ea131bbed0c5",
+      "width": 3024,
+      "height": 1730,
+      "build": "original feature build, Actions run 42409988660",
+      "source": "2df6f4b4a245b7410d2120c0dc070adf43488b7e",
+      "test_settings": "screenshots-before-data (plugin-free, isolated)",
+      "model": "hole-fixture-before-replacement.3mf",
+      "steps": [
+        "Open saved hole fixture in Design",
+        "Zoom to body",
+        "Move/Rotate: Z angle 30 degrees",
+        "Confirm",
+        "Escape",
+        "Cmd+Z"
+      ],
+      "observed": "Body remains rotated; viewport status says Nothing to undo. Edit menu Undo and Redo were disabled.",
+      "placement_sources_match_upstream_base": true,
+      "original_project_modified": false,
+      "normal_exit": 0,
+      "recorded_at": "2026-11-10T22:17:13.384763-06:00"
+    },
+    {
+      "file": "placement-after-undo.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "eb20ad369847200517db67b937739677d95e3510f89cd8b90b8bea5b14af0b57",
+      "width": 3024,
+      "height": 1730,
+      "source": "b9193e6c5fdee283d91c7c0780a8d48428f4b2b8",
+      "build": "macOS arm64 Release, Actions run 42957716231",
+      "observed": "Confirm a 30 degree Z rotation, then Undo. Original orientation restored.",
+      "original_project_modified": false,
+      "normal_exit": 0
+    },
+    {
+      "file": "placement-cancel-noop-undo.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "b34c603acebed059ee558e2297b9f6b0c487167cebb61029b846c62227fcd3ac",
+      "width": 3024,
+      "height": 1730,
+      "source": "b9193e6c5fdee283d91c7c0780a8d48428f4b2b8",
+      "build": "macOS arm64 Release, Actions run 42957716231",
+      "observed": "Redo the rotation, cancel a 25 mm preview, confirm an unchanged move, then Undo once. Original orientation restored.",
+      "original_project_modified": false,
+      "normal_exit": 0
+    },
+    {
+      "file": "placement-deletion-undo.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "2b40d3933ad63bba9eb4eee8dd489ddf8f5fb3a9ef673b4b47e55fc033c43751",
+      "width": 3024,
+      "height": 1730,
+      "source": "b9193e6c5fdee283d91c7c0780a8d48428f4b2b8",
+      "build": "macOS arm64 Release, Actions run 42957716231",
+      "observed": "Delete the rotated body, focus the viewport, then Undo. The rotated body is restored.",
+      "original_project_modified": false,
+      "normal_exit": 0
+    },
+    {
+      "file": "api-selected-face.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "e794599709a90ae5dfff38eee63228fa6574ce8e5b57ea084a828a72a69b73ba",
+      "width": 3024,
+      "height": 1730,
+      "source": "4de48d5209a63674c44096046632761811889e97",
+      "build": "macOS arm64 Release, Actions run 42957716231",
+      "observed": "The broad top face of the through-hole fixture is selected in Design.",
+      "original_project_modified": false,
+      "normal_exit": 0
+    },
+    {
+      "file": "api-face-area.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "c728b691920ba1850b7fa432467881ede672b6a58d23fa826d40ec72abd09381",
+      "width": 1120,
+      "height": 1240,
+      "source": "4de48d5209a63674c44096046632761811889e97",
+      "build": "macOS arm64 Release, Actions run 42957716231",
+      "observed": "The sample inspector reports top-face area 4399.999999999999 square millimetres (expected 4400).",
+      "original_project_modified": false,
+      "normal_exit": 0
+    },
+    {
+      "file": "api-boundary-loops.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "f7193c8b47a3a9be04876bf9e58f89365dbb302df6fa7afe75613419a346557e",
+      "width": 1120,
+      "height": 1494,
+      "source": "4de48d5209a63674c44096046632761811889e97",
+      "build": "macOS arm64 Release, Actions run 42957716231",
+      "observed": "The same selected face has one complete outer loop and one complete inner loop.",
+      "original_project_modified": false,
+      "normal_exit": 0
+    },
+    {
+      "file": "api-selected-vertex.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "3ae28884ddfabab2bf4ada6cc1efde723a70dde48de32fa0a36fca6915d08709",
+      "width": 3024,
+      "height": 1730,
+      "source": "4de48d5209a63674c44096046632761811889e97",
+      "build": "macOS arm64 Release, Actions run 42957716231",
+      "observed": "Native vertex selection at the upper outer corner.",
+      "original_project_modified": false,
+      "normal_exit": 0
+    },
+    {
+      "file": "api-vertex-fields.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "e4e2565e72ca4fff1cd0bf8eec466db24195f891af9d385f8544d3abc0efd2a9",
+      "width": 1120,
+      "height": 1494,
+      "source": "4de48d5209a63674c44096046632761811889e97",
+      "build": "macOS arm64 Release, Actions run 42957716231",
+      "observed": "The inspector reports vertex 3 at (-40, 30, 20), clears face and edge fields, and reports revision 5.",
+      "original_project_modified": false,
+      "normal_exit": 0
+    },
+    {
+      "file": "api-face-clears-vertex.jpg",
+      "mime_type": "image/jpeg",
+      "sha256": "3389edc1959e549b5d201f2316a37e46b85d86bbe6a2fe8fd2ce1c765163df6c",
+      "width": 1120,
+      "height": 1494,
+      "source": "4de48d5209a63674c44096046632761811889e97",
+      "build": "macOS arm64 Release, Actions run 42957716231",
+      "observed": "Selecting the broad face clears vertex_index to -1 and advances selection_revision to 6.",
+      "original_project_modified": false,
+      "normal_exit": 0
+    }
+  ],
+  "review_copy_metadata": {
+    "cad-selection": {
+      "original_identifier": "com.orcaslicer.OrcaSlicer",
+      "review_identifier": "com.orcaslicer.cadreview.api",
+      "binary_sha256": "c5123a382756e797c5883ded2baa73ef18537356278a27540b8bb197658694b5",
+      "binary_unchanged": true,
+      "metadata_changes": [
+        "CFBundleIdentifier",
+        "CFBundleDisplayName"
+      ]
+    },
+    "placement-undo": {
+      "original_identifier": "com.orcaslicer.OrcaSlicer",
+      "review_identifier": "com.orcaslicer.cadreview.placement",
+      "binary_sha256": "fea5e9c390ccec50b100aabea6dfba3929a276178c9814798b2e3067790e527f",
+      "binary_unchanged": true,
+      "metadata_changes": [
+        "CFBundleIdentifier",
+        "CFBundleDisplayName"
+      ]
+    }
+  }
+}
