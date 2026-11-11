@@ -1,0 +1,141 @@
+name: Focused CAD contributions validation
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        type: choice
+        options: [checks, release]
+        default: checks
+permissions:
+  contents: read
+jobs:
+  macos:
+    name: ${{ matrix.label }} / ${{ inputs.stage }}
+    runs-on: macos-15
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: cad-selection
+            ref: codex/cad-selection-api
+            tests: 'CadDocument|CadShape|CadFaceSelection|PluginCadGeometry|DesignSketchTool|PluginLifecycle|PluginHost'
+          - label: placement-undo
+            ref: codex/cad-placement-undo
+            tests: 'CadDocument|DesignSketchTool'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.ref }}
+          fetch-depth: 0
+          lfs: false
+      - name: Record source and check the full contribution
+        shell: bash
+        run: |
+          mkdir -p validation-results
+          git rev-parse HEAD | tee validation-results/source-commit.txt
+          git diff --check d76276778c1879373eef4f49055b685fba8d41be
+          git diff --name-only d76276778c1879373eef4f49055b685fba8d41be > validation-results/changed-files.txt
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          path = Path('sandboxes/orca_cad_face_selection_plugin_any.py')
+          if path.exists():
+              ast.parse(path.read_text(), filename=str(path))
+          PY
+      - uses: actions/cache/restore@v6
+        with:
+          path: ${{ github.workspace }}/deps/build/arm64
+          key: macos-arm64-cache-orcaslicer_deps-build-51e57205fad8087444b7b68732f2176cce97d2e47622e11bad733d0d02845b5b
+          fail-on-cache-miss: true
+      - uses: lukka/get-cmake@latest
+        with:
+          cmakeVersion: '~4.3.0'
+      - name: Check every changed C++ file against upstream
+        if: inputs.stage == 'checks'
+        shell: bash
+        run: |
+          export SDKROOT="$(xcrun --show-sdk-path)"
+          stdlib="$SDKROOT/usr/include/c++/v1"
+          if [ ! -f "$stdlib/cstdint" ]; then
+            stdlib="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
+          fi
+          test -f "$stdlib/cstdint"
+          export CPLUS_INCLUDE_PATH="$stdlib"
+          export C_INCLUDE_PATH="$SDKROOT/usr/include"
+          cmake -S . -B build-tidy -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSLIC3R_PCH=OFF -DORCA_TOOLS=ON -DBUILD_TESTS=ON \
+            -DDEP_BUILD_DIR="$PWD/deps/build/arm64" -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_SYSROOT="$SDKROOT" \
+            '-DCMAKE_IGNORE_PREFIX_PATH=/opt/local;/usr/local;/opt/homebrew' \
+            -DLIBLZMA_INCLUDE_DIR="$(brew --prefix xz)/include" > validation-results/analysis-configure.log 2>&1
+          scripts/run_clang_tidy.sh --base d76276778c1879373eef4f49055b685fba8d41be --no-fetch --yes --jobs 3 > validation-results/clang-tidy.log 2>&1
+      - name: Build macOS Release app and tests
+        if: inputs.stage == 'release'
+        env:
+          ORCA_TESTS_BUILD_ONLY: '1'
+        run: ./build_release_macos.sh -s -n -x -j 3 -a arm64 -t 10.15 -T
+      - name: Run contribution regressions
+        if: inputs.stage == 'release'
+        shell: bash
+        run: |
+          ctest --test-dir build/arm64/tests -C Release -L '${{ matrix.tests }}' -LE NotWorking --no-tests=error --output-on-failure --output-junit "$PWD/validation-results/tests.xml" -j 3
+      - name: Confirm the regression detects the defect
+        if: inputs.stage == 'release'
+        shell: bash
+        run: |
+          if [ '${{ matrix.label }}' = 'cad-selection' ]; then
+            path=src/slic3r/plugin/PluginManager.cpp
+            target=slic3rutils_tests
+            executable=build/arm64/tests/slic3rutils/Release/slic3rutils_tests.app/Contents/MacOS/slic3rutils_tests
+            testcase='Unloaded CAD plugin entries survive process finalization'
+            expected=134
+          else
+            path=src/libslic3r/CAD/CadDocument.cpp
+            target=libslic3r_tests
+            executable=build/arm64/tests/libslic3r/Release/libslic3r_tests.app/Contents/MacOS/libslic3r_tests
+            testcase='Undo and redo restore body placements alongside feature edits'
+            expected=42
+          fi
+          trap 'git restore -- "$path"' EXIT
+          python3 - '${{ matrix.label }}' <<'PY'
+          import sys
+          from pathlib import Path
+          if sys.argv[1] == 'cad-selection':
+              path = Path('src/slic3r/plugin/PluginManager.cpp')
+              text = path.read_text()
+              assert text.count('    PluginHostCad::initialize();') == 1
+              path.write_text(text.replace('    PluginHostCad::initialize();', '    // Restore the lifetime defect for this regression check.'))
+          else:
+              path = Path('src/libslic3r/CAD/CadDocument.cpp')
+              text = path.read_text()
+              text = text.replace('Snapshot{features, variables, body_transforms}', 'Snapshot{features, variables}')
+              text = text.replace('Snapshot{std::move(features), std::move(variables), std::move(body_transforms)}', 'Snapshot{std::move(features), std::move(variables)}')
+              text = text.replace('    body_transforms = std::move(m_undo.back().body_transforms);\n', '')
+              text = text.replace('    body_transforms = std::move(m_redo.back().body_transforms);\n', '')
+              path.write_text(text)
+          PY
+          cmake --build build/arm64 --config Release --target "$target" --parallel 3
+          set +e
+          "$executable" "$testcase" > validation-results/defect-restored.log 2>&1
+          status=$?
+          set -e
+          echo "Without fix: $status; expected: $expected" | tee validation-results/defect-exit-status.txt
+          git restore -- "$path"
+          cmake --build build/arm64 --config Release --target "$target" --parallel 3
+          "$executable" "$testcase" > validation-results/fix-restored.log 2>&1
+          test "$status" -eq "$expected"
+      - name: Package the focused review app
+        if: inputs.stage == 'release' && always() && hashFiles('build/arm64/OrcaSlicer/OrcaSlicer.app/Contents/MacOS/OrcaSlicer') != ''
+        shell: bash
+        run: |
+          git diff --exit-code
+          ditto -c -k --sequesterRsrc --keepParent build/arm64/OrcaSlicer/OrcaSlicer.app cad-review-app.zip
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: cad-split-${{ matrix.label }}-${{ inputs.stage }}-${{ github.run_id }}
+          path: |
+            cad-review-app.zip
+            validation-results
+            build/arm64/tests/Testing/Temporary/LastTest.log
+          retention-days: 7
