@@ -74,11 +74,19 @@ jobs:
       - name: Check changed C++ includes and style
         run: |
           mkdir -p validation-results
+          export SDKROOT="$(xcrun --show-sdk-path)"
+          stdlib="$SDKROOT/usr/include/c++/v1"
+          if [ ! -f "$stdlib/cstdint" ]; then
+            stdlib="$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"
+          fi
+          test -f "$stdlib/cstdint"
+          export CPLUS_INCLUDE_PATH="$stdlib"
+          export C_INCLUDE_PATH="$SDKROOT/usr/include"
           # The cached Boost iostreams was built with Homebrew's XZ headers. The analysis
           # configure deliberately excludes Homebrew from automatic dependency discovery.
           cmake -S . -B build-tidy -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DSLIC3R_PCH=OFF -DORCA_TOOLS=ON -DBUILD_TESTS=ON \
-            -DDEP_BUILD_DIR="$PWD/deps/build/arm64" -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DDEP_BUILD_DIR="$PWD/deps/build/arm64" -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_SYSROOT="$SDKROOT" \
             '-DCMAKE_IGNORE_PREFIX_PATH=/opt/local;/usr/local;/opt/homebrew' \
             -DLIBLZMA_INCLUDE_DIR="$(brew --prefix xz)/include" > validation-results/analysis-configure.log 2>&1
           scripts/run_clang_tidy.sh --base 2df6f4b4 --no-fetch --yes --jobs 3 > validation-results/clang-tidy.log 2>&1
