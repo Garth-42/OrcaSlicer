@@ -6889,6 +6889,7 @@ int PartPlateList::select_plate(int index)
 		return -1;
 	}
 	const int previous_index = m_current_plate;
+	if (previous_index != index && m_plater) m_plater->get_view3D_canvas3D()->invalidate_prepare_selection();
 
 	// BBS: erase unnecessary snapshot
 	if (get_curr_plate_index() != index && m_intialized) {

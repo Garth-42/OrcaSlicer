@@ -2834,11 +2834,17 @@ void ModelVolume::center_geometry_after_creation(bool update_source_offset)
     if (!shift.isApprox(Vec3d::Zero()))
     {
         if (m_mesh) {
+            m_geometry_revision.touch();
+            // Copied volumes can share source geometry. Do not mutate another
+            // volume's source without its revision witness observing the change.
+            if (m_mesh.use_count() > 1) m_mesh = std::make_shared<TriangleMesh>(*m_mesh);
             const_cast<TriangleMesh*>(m_mesh.get())->translate(-(float)shift(0), -(float)shift(1), -(float)shift(2));
             const_cast<TriangleMesh*>(m_mesh.get())->set_init_shift(shift);
         }
-        if (m_convex_hull)
-			const_cast<TriangleMesh*>(m_convex_hull.get())->translate(-(float)shift(0), -(float)shift(1), -(float)shift(2));
+        if (m_convex_hull) {
+            if (m_convex_hull.use_count() > 1) m_convex_hull = std::make_shared<TriangleMesh>(*m_convex_hull);
+            const_cast<TriangleMesh*>(m_convex_hull.get())->translate(-(float)shift(0), -(float)shift(1), -(float)shift(2));
+        }
         translate(shift);
     }
 
@@ -3151,15 +3157,19 @@ void ModelVolume::mirror(Axis axis)
     set_mirror(mirror);
 }
 
-// This method could only be called before the meshes of this ModelVolumes are not shared!
+// Initialization works on a private mesh so copied model volumes keep their source.
 void ModelVolume::scale_geometry_after_creation(const Vec3f& versor)
 {
+    m_geometry_revision.touch();
+    if (m_mesh.use_count() > 1) m_mesh = std::make_shared<TriangleMesh>(*m_mesh);
 	const_cast<TriangleMesh*>(m_mesh.get())->scale(versor);
     if (m_convex_hull->empty())
         //BBS: recompute the convex hull if it is null for previous too small
         this->calculate_convex_hull();
-    else
+    else {
+        if (m_convex_hull.use_count() > 1) m_convex_hull = std::make_shared<TriangleMesh>(*m_convex_hull);
         const_cast<TriangleMesh*>(m_convex_hull.get())->scale(versor);
+    }
 }
 
 void ModelVolume::transform_this_mesh(const Transform3d &mesh_trafo, bool fix_left_handed)

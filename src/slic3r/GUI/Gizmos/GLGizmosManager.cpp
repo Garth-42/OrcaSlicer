@@ -35,6 +35,7 @@
 #include "libslic3r/Point.hpp"
 #include "libslic3r/Utils.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmoMeasure.hpp"
+#include "slic3r/GUI/Gizmos/GLGizmoPrepareSelection.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmosCommon.hpp"
 #include <utility>
 #include <map>
@@ -206,6 +207,9 @@ void GLGizmosManager::switch_gizmos_icon_filename()
         case (EType::Measure):
             gizmo->set_icon_filename(m_is_dark ? "toolbar_measure_dark.svg" : "toolbar_measure.svg");
             break;
+        case EType::GeometrySelection:
+            gizmo->set_icon_filename(m_is_dark ? "toolbar_select_geometry_dark.svg" : "toolbar_select_geometry.svg");
+            break;
         case (EType::Assembly):
             gizmo->set_icon_filename(m_is_dark ? "toolbar_assembly_dark.svg" : "toolbar_assembly.svg");
             break;
@@ -257,6 +261,7 @@ bool GLGizmosManager::init()
     m_gizmos.emplace_back(new GLGizmoAssembly(m_parent, m_is_dark ? "toolbar_assembly_dark.svg" : "toolbar_assembly.svg", EType::Assembly));
     m_gizmos.emplace_back(new GLGizmoSimplify(m_parent, "reduce_triangles.svg", EType::Simplify));
     m_gizmos.emplace_back(new GLGizmoBrimEars(m_parent, m_is_dark ? "toolbar_brimears_dark.svg" : "toolbar_brimears.svg", EType::BrimEars));
+    m_gizmos.emplace_back(new GLGizmoPrepareSelection(m_parent, EType::GeometrySelection));
     //m_gizmos.emplace_back(new GLGizmoSlaSupports(m_parent, "sla_supports.svg", sprite_id++));
     //m_gizmos.emplace_back(new GLGizmoFaceDetector(m_parent, "face recognition.svg", sprite_id++));
     //m_gizmos.emplace_back(new GLGizmoHollow(m_parent, "hollow.svg", sprite_id++));
@@ -491,7 +496,7 @@ bool GLGizmosManager::check_gizmos_closed_except(EType type) const
 void GLGizmosManager::set_hover_id(int id)
 {
 	// Measure and assembly handles hover by itself
-    if (m_current == EType::Measure || m_current == EType::Assembly) { return; }
+    if (m_current == EType::Measure || m_current == EType::Assembly || m_current == EType::GeometrySelection) { return; }
     if (!m_enabled || m_current == Undefined)
         return;
 
@@ -523,6 +528,8 @@ void GLGizmosManager::update_data()
                                    : CommonGizmosDataID(0));
     update_section_view();
     if (m_current != Undefined) m_gizmos[m_current]->data_changed(m_serializing);
+    if (m_current != GeometrySelection && m_gizmos.size() > GeometrySelection)
+        m_gizmos[GeometrySelection]->data_changed(m_serializing);
 
     // Orca: hack: Fix issue that flatten gizmo faces not updated after reload from disk
     if (m_current != Flatten && !m_gizmos.empty()) m_gizmos[Flatten]->data_changed(m_serializing);
@@ -667,10 +674,24 @@ void GLGizmosManager::on_change_color_mode(bool is_dark) {
 
 void GLGizmosManager::render_current_gizmo() const
 {
-    if (!m_enabled || m_current == Undefined)
+    if (!m_enabled)
         return;
+    if (m_gizmos.size() > GeometrySelection && m_current != GeometrySelection)
+        m_gizmos[GeometrySelection]->render(); // retained selection and deferred GL resource cleanup
+    if (m_current != Undefined) m_gizmos[m_current]->render();
+}
 
-    m_gizmos[m_current]->render();
+void GLGizmosManager::invalidate_prepare_selection()
+{
+    if (m_gizmos.size() > GeometrySelection) static_cast<GLGizmoPrepareSelection*>(m_gizmos[GeometrySelection].get())->invalidate();
+}
+void GLGizmosManager::cancel_prepare_gesture()
+{
+    if (m_gizmos.size() > GeometrySelection) static_cast<GLGizmoPrepareSelection*>(m_gizmos[GeometrySelection].get())->cancel_gesture();
+}
+void GLGizmosManager::tick_prepare_selection()
+{
+    if (m_gizmos.size() > GeometrySelection) static_cast<GLGizmoPrepareSelection*>(m_gizmos[GeometrySelection].get())->tick();
 }
 
 void GLGizmosManager::render_painter_gizmo()
@@ -705,6 +726,8 @@ void GLGizmosManager::render_overlay_input_window()
         return;
 
     do_render_overlay(false);
+    if (m_gizmos.size() > GeometrySelection && m_current == Undefined)
+        static_cast<GLGizmoPrepareSelection*>(m_gizmos[GeometrySelection].get())->render_retained_indicator();
 }
 
 size_t GLGizmosManager::get_overlay_state_hash() const
@@ -858,7 +881,7 @@ bool GLGizmosManager::on_mouse(const wxMouseEvent &mouse_event)
         m_gizmos[m_current]->on_mouse(mouse_event))
         return true;
 
-    if (mouse_event.RightUp() && m_current != EType::Undefined && !m_parent.is_mouse_dragging()) {
+    if (mouse_event.RightUp() && m_current != EType::Undefined && m_current != GeometrySelection && !m_parent.is_mouse_dragging()) {
         // Prevent default right context menu in gizmos
         return true;
     }
@@ -868,6 +891,7 @@ bool GLGizmosManager::on_mouse(const wxMouseEvent &mouse_event)
 
 bool GLGizmosManager::on_char(wxKeyEvent& evt)
 {
+    if (m_current == GeometrySelection && ImGui::GetIO().WantTextInput) return false;
     // see include/wx/defs.h enum wxKeyCode
     int keyCode = evt.GetKeyCode();
     int ctrlMask = wxMOD_CONTROL;
@@ -899,6 +923,10 @@ bool GLGizmosManager::on_char(wxKeyEvent& evt)
         case WXK_ESCAPE:
         {
             if (m_current != Undefined) {
+                if (m_current == GeometrySelection && !static_cast<GLGizmoPrepareSelection*>(m_gizmos[GeometrySelection].get())->escape()) {
+                    processed = true;
+                    break;
+                }
                 if ((m_current == Measure || m_current == Assembly) && gizmo_event(SLAGizmoEventType::Escape)) {
                     // do nothing
                 } else
@@ -1464,6 +1492,8 @@ bool GLGizmosManager::activate_gizmo(EType type)
 
     if (m_gizmos.empty())
         return false;
+    if (type != Undefined && type != GeometrySelection)
+        invalidate_prepare_selection();
 
     if (m_current != Undefined) {
         // clean up previous gizmo
@@ -1544,6 +1574,8 @@ bool GLGizmosManager::is_hiding_instances() const
 std::string get_name_from_gizmo_etype(GLGizmosManager::EType type)
 {
     switch (type) {
+    case GLGizmosManager::GeometrySelection:
+        return "Select geometry";
     case GLGizmosManager::EType::Move:
         return "Move";
     case GLGizmosManager::EType::Rotate:

@@ -327,6 +327,7 @@ set(lisbslic3r_sources
     Geometry.cpp
     Geometry/Curves.hpp
     Geometry.hpp
+    GeometryRevision.hpp
     Geometry/MedialAxis.cpp
     Geometry/MedialAxis.hpp
     Geometry/Voronoi.cpp
@@ -414,6 +415,8 @@ set(lisbslic3r_sources
     Polygon.hpp
     PolygonTrimmer.cpp
     PolygonTrimmer.hpp
+    PrepareGeometry.cpp
+    PrepareGeometry.hpp
     Polyline.cpp
     Polyline.hpp
     PresetBundle.cpp

@@ -102,6 +102,7 @@ public:
         Assembly,
         Simplify,
         BrimEars,
+        GeometrySelection,
         //SlaSupports,
         // BBS
         //FaceRecognition,
@@ -294,6 +295,9 @@ public:
     /// Should be called when selection changed
     /// </summary>
     void update_data();
+    void invalidate_prepare_selection();
+    void cancel_prepare_gesture();
+    void tick_prepare_selection();
     // Passes the canvas' section view to the object clipper of the painting and brim ears gizmos.
     void update_section_view();
 

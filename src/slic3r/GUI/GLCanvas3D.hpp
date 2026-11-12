@@ -30,6 +30,7 @@
 #include "GLToolbar.hpp"
 #include "Event.hpp"
 #include "Selection.hpp"
+#include "PrepareSelection.hpp"
 #include "Gizmos/GLGizmosManager.hpp"
 #include "GUI_ObjectLayers.hpp"
 #include "GLSelectionRectangle.hpp"
@@ -662,6 +663,9 @@ private:
     Mouse m_mouse;
     // Orca: Gesture pans have their own lifecycle and stable world-space anchor.
     std::optional<Vec3d> m_gesture_pan_anchor;
+    // Keep the cache alive through gizmo/worker destruction, including GUI recreation.
+    PrepareSelectionStore m_prepare_selection;
+    std::uint64_t m_prepare_scene_revision = 0;
     GLGizmosManager m_gizmos;
     //BBS: GUI refactor: GLToolbar
     mutable GLToolbar m_main_toolbar;
@@ -1037,6 +1041,10 @@ public:
 
     const Selection& get_selection() const { return m_selection; }
     Selection& get_selection() { return m_selection; }
+    PrepareSelectionStore& prepare_selection() { return m_prepare_selection; }
+    std::uint64_t prepare_scene_revision() const { return m_prepare_scene_revision; }
+    std::vector<Vec4d> prepare_pick_planes() const;
+    void invalidate_prepare_selection(bool document = false);
 
     const GLGizmosManager& get_gizmos_manager() const { return m_gizmos; }
     GLGizmosManager& get_gizmos_manager() { return m_gizmos; }

@@ -10993,6 +10993,7 @@ void Plater::priv::exit_gizmo()
 
 void Plater::priv::remove(size_t obj_idx)
 {
+    if (view3D) view3D->get_canvas3d()->invalidate_prepare_selection();
     if (view3D->is_layers_editing_enabled())
         view3D->enable_layers_editing(false);
 
@@ -11059,6 +11060,7 @@ bool Plater::priv::delete_object_from_model(size_t obj_idx, bool refresh_immedia
 
 void Plater::priv::delete_all_objects_from_model()
 {
+    if (view3D) view3D->get_canvas3d()->invalidate_prepare_selection();
     Plater::TakeSnapshot snapshot(q, _u8L("Delete All Objects"));
 
     if (view3D->is_layers_editing_enabled())
@@ -11090,6 +11092,7 @@ void Plater::priv::delete_all_objects_from_model()
 
 void Plater::priv::reset(bool apply_presets_change, bool reload_presets)
 {
+    if (view3D) view3D->get_canvas3d()->invalidate_prepare_selection(true);
     // TakeSnapshot below and load_current_presets() further down each re-evaluate the
     // aggregate dirty flag against a baseline that hasn't been reset yet, so they can toggle
     // is_dirty() back and forth several times before it settles; coalesce those into one event.
@@ -12371,6 +12374,7 @@ static std::vector<std::pair<int, int>> reloadable_volumes(const Model &model, c
 
 void Plater::priv::reload_from_disk()
 {
+    if (view3D) view3D->get_canvas3d()->invalidate_prepare_selection();
 #if ENABLE_RELOAD_FROM_DISK_REWORK
     // collect selected reloadable ModelVolumes
     std::vector<std::pair<int, int>> selected_volumes = reloadable_volumes(model, get_selection());
@@ -14198,6 +14202,7 @@ void Plater::priv::on_tab_selection_changing(wxBookCtrlEvent& e)
         return;
     }
     const wxString new_name = main_frame->m_tabpanel->GetPageName(new_sel);
+    if (new_name != TAB_ID_PREPARE && view3D) view3D->get_canvas3d()->invalidate_prepare_selection();
     sidebar_layout.show = new_name == TAB_ID_PREPARE || new_name == TAB_ID_PREVIEW;
     update_sidebar();
     int old_sel = e.GetOldSelection();
@@ -15720,6 +15725,7 @@ bool Plater::priv::up_to_date(bool saved, bool backup)
 
 void Plater::priv::undo_redo_to(std::vector<UndoRedo::Snapshot>::const_iterator it_snapshot)
 {
+    if (view3D) view3D->get_canvas3d()->invalidate_prepare_selection();
     // Make sure that no updating function calls take_snapshot until we are done.
     SuppressSnapshots snapshot_supressor(q);
 

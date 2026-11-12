@@ -4554,6 +4554,8 @@ void ObjectList::delete_from_model_and_list(const ItemType type, const int obj_i
     if (!(type&(itObject|itVolume|itInstance)))
         return;
 
+    wxGetApp().plater()->get_view3D_canvas3D()->invalidate_prepare_selection();
+
     take_snapshot(_u8L("Delete selected"));
 
     if (type&itObject) {
@@ -4582,6 +4584,8 @@ void ObjectList::delete_from_model_and_list(const std::vector<ItemForDelete>& it
 {
     if (items_for_delete.empty())
         return;
+
+    wxGetApp().plater()->get_view3D_canvas3D()->invalidate_prepare_selection();
 
     m_prevent_list_events = true;
     //BBS
@@ -6496,6 +6500,8 @@ void ObjectList::fix_all_through_cgal(bool all_plates)
 
 void ObjectList::fix_through_cgal(const std::vector<int> &obj_idxs, const std::vector<int> &vol_idxs)
 {
+    // Repair replaces source geometry while its progress dialog runs a nested event loop.
+    wxGetApp().plater()->get_view3D_canvas3D()->invalidate_prepare_selection();
     // Do not fix anything when a gizmo is open. There might be issues with updates
     // and what is worse, the snapshot time would refer to the internal stack.
     if (obj_idxs.empty() || !wxGetApp().plater()->get_view3D_canvas3D()->get_gizmos_manager().check_gizmos_closed_except(GLGizmosManager::Undefined))

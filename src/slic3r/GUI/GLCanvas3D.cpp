@@ -1,5 +1,6 @@
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/Point.hpp"
+#include "slic3r/GUI/PrepareSelection.hpp"
 #include <limits>
 #include <string>
 #include <sstream>
@@ -3204,6 +3205,7 @@ void GLCanvas3D::mirror_selection(Axis axis)
 // 5) Out of bed collision status & message overlay (texture)
 void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_refresh)
 {
+    ++m_prepare_scene_revision;
     if (m_canvas == nullptr || m_config == nullptr || m_model == nullptr)
         return;
 
@@ -3975,6 +3977,7 @@ void GLCanvas3D::bind_event_handlers()
         // never arrives and ImGui keeps the widget active. Cancel the interaction: clear the active widget
         // before releasing the buttons so the release is not taken as a click.
         m_canvas->Bind(wxEVT_MOUSE_CAPTURE_LOST, [this](wxMouseCaptureLostEvent&) {
+                m_gizmos.cancel_prepare_gesture();
                 if (GImGui != nullptr) {
                     ImGui::ClearActiveID();
                     ImGuiIO& io = ImGui::GetIO();
@@ -4033,8 +4036,30 @@ void GLCanvas3D::unbind_event_handlers()
     }
 }
 
+std::vector<Vec4d> GLCanvas3D::prepare_pick_planes() const
+{
+    std::vector<Vec4d> planes;
+    auto add = [&](const ClippingPlane& plane) {
+        if (plane.is_active()) { const Vec3d normal = -plane.get_normal(); planes.emplace_back(normal.x(),normal.y(),normal.z(),plane.get_offset()); }
+    };
+    if (m_use_clipping_planes) for (const auto& plane : m_clipping_planes) add(plane);
+    add(get_raycaster_clipping_plane());
+    // Use the floor in the renderer's build-volume frame, including belt presets.
+    if (m_bed.build_volume().valid())
+        planes.emplace_back(0.,0.,1.,-(m_bed.build_volume().bounding_volume().min.z()+SINKING_Z_THRESHOLD));
+    return planes;
+}
+
+void GLCanvas3D::invalidate_prepare_selection(bool document)
+{
+    if (document) m_prepare_selection.new_document();
+    else m_prepare_selection.clear(PrepareSelectionReason::Invalidated);
+    m_gizmos.invalidate_prepare_selection();
+}
+
 void GLCanvas3D::on_idle(wxIdleEvent& evt)
 {
+    m_gizmos.tick_prepare_selection();
     if (!m_initialized || m_benchmarking)
         return;
 
@@ -4982,6 +5007,8 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
     }
 
     if (!mouse_in_layer_editing && m_gizmos.on_mouse(evt)) {
+        if (m_gizmos.get_current_type() == GLGizmosManager::GeometrySelection && (evt.LeftDown() || evt.LeftDClick()))
+            m_mouse.drag.start_position_2D = pos; // retain the normal camera-drag anchor without starting an object move
         if (m_gizmos.is_running()) {
             _deactivate_arrange_menu();
             _deactivate_orient_menu();
@@ -5225,6 +5252,7 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
                             m_mouse.drag.start_position_3D = scene_position;
                             m_sequential_print_clearance_first_displacement = true;
                             m_moving = true;
+                            m_prepare_selection.suspend();
 
                             if (!has_mouse_capture()) // ORCA keep tracking mouse position while drag active and cursor not in window bounds
                                 m_canvas->CaptureMouse();
@@ -6354,6 +6382,21 @@ void GLCanvas3D::set_cursor(ECursorType type)
 
 void GLCanvas3D::mouse_up_cleanup()
 {
+    if (const auto held=m_prepare_selection.suspended()) {
+        bool restored=false;
+        if (m_model && held->target.mesh.valid() &&
+            held->target.plate == wxGetApp().plater()->get_partplate_list().get_curr_plate_index()) for (const auto* v:m_volumes.volumes) {
+            if (!v || !v->is_active || v->object_idx()<0 || size_t(v->object_idx())>=m_model->objects.size()) continue;
+            const auto* object=m_model->objects[v->object_idx()];
+            if (object->id().id!=held->target.object || v->volume_idx()<0 || size_t(v->volume_idx())>=object->volumes.size() ||
+                v->instance_idx()<0 || size_t(v->instance_idx())>=object->instances.size()) continue;
+            if (v->selected && object->volumes[v->volume_idx()]->id().id==held->target.volume && object->instances[v->instance_idx()]->id().id==held->target.instance &&
+                object->volumes[v->volume_idx()]->geometry_stamp().same_source(held->target.mesh)) {
+                m_prepare_selection.resume(v->world_matrix());restored=true;break;
+            }
+        }
+        if (!restored) m_prepare_selection.clear(PrepareSelectionReason::Invalidated);
+    }
     // Both direct dragging and gizmo manipulation clear the expensive red
     // exclusion-intersection mesh while moving. Gizmo drags do not always set
     // m_mouse.dragging, so every completed mouse operation must allow the

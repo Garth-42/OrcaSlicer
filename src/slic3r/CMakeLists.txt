@@ -4,6 +4,10 @@ project(libslic3r_gui)
 include(PrecompiledHeader)
 
 set(SLIC3R_GUI_SOURCES
+    GUI/PrepareSelection.cpp
+    GUI/PrepareSelection.hpp
+    GUI/PrepareGeometryPicker.cpp
+    GUI/PrepareGeometryPicker.hpp
     GUI/Widgets/AnimaController.hpp
     GUI/Widgets/AnimaController.cpp
     Config/Snapshot.cpp
@@ -195,6 +199,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Gizmos/GLGizmoFuzzySkin.hpp
     GUI/Gizmos/GLGizmoMeasure.cpp
     GUI/Gizmos/GLGizmoMeasure.hpp
+    GUI/Gizmos/GLGizmoPrepareSelection.cpp
+    GUI/Gizmos/GLGizmoPrepareSelection.hpp
     GUI/Gizmos/GLGizmoMeshBoolean.cpp
     GUI/Gizmos/GLGizmoMeshBoolean.hpp
     GUI/Gizmos/GLGizmoMmuSegmentation.cpp

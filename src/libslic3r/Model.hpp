@@ -7,6 +7,7 @@
 #include "libslic3r.h"
 #include "enum_bitmask.hpp"
 #include "Geometry.hpp"
+#include "GeometryRevision.hpp"
 #include "ObjectID.hpp"
 #include "Point.hpp"
 #include "AppConfig.hpp"
@@ -901,13 +902,14 @@ public:
     // The triangular model.
     const TriangleMesh& mesh() const { return *m_mesh.get(); }
     std::shared_ptr<const TriangleMesh> mesh_ptr() const { return m_mesh; }
-    void                set_mesh(const TriangleMesh &mesh) { m_mesh = std::make_shared<const TriangleMesh>(mesh); m_is_splittable = -1; }
-    void                set_mesh(TriangleMesh &&mesh) { m_mesh = std::make_shared<const TriangleMesh>(std::move(mesh)); m_is_splittable = -1; }
-    void                set_mesh(const indexed_triangle_set &mesh) { m_mesh = std::make_shared<const TriangleMesh>(mesh); m_is_splittable = -1; }
-    void                set_mesh(indexed_triangle_set &&mesh) { m_mesh = std::make_shared<const TriangleMesh>(std::move(mesh)); m_is_splittable = -1; }
-    void                set_mesh(std::shared_ptr<const TriangleMesh> &mesh) { m_mesh = mesh; m_is_splittable = -1; }
-    void                set_mesh(std::unique_ptr<const TriangleMesh> &&mesh) { m_mesh = std::move(mesh); m_is_splittable = -1; }
-	void				reset_mesh() { m_mesh = std::make_shared<const TriangleMesh>(); m_is_splittable = -1; }
+    GeometryRevision::Stamp geometry_stamp() const { return m_geometry_revision.stamp(); }
+    void                set_mesh(const TriangleMesh &mesh) { m_geometry_revision.touch(); m_mesh = std::make_shared<const TriangleMesh>(mesh); m_is_splittable = -1; }
+    void                set_mesh(TriangleMesh &&mesh) { m_geometry_revision.touch(); m_mesh = std::make_shared<const TriangleMesh>(std::move(mesh)); m_is_splittable = -1; }
+    void                set_mesh(const indexed_triangle_set &mesh) { m_geometry_revision.touch(); m_mesh = std::make_shared<const TriangleMesh>(mesh); m_is_splittable = -1; }
+    void                set_mesh(indexed_triangle_set &&mesh) { m_geometry_revision.touch(); m_mesh = std::make_shared<const TriangleMesh>(std::move(mesh)); m_is_splittable = -1; }
+    void                set_mesh(std::shared_ptr<const TriangleMesh> &mesh) { m_geometry_revision.touch(); m_mesh = mesh; m_is_splittable = -1; }
+    void                set_mesh(std::unique_ptr<const TriangleMesh> &&mesh) { m_geometry_revision.touch(); m_mesh = std::move(mesh); m_is_splittable = -1; }
+	void				reset_mesh() { m_geometry_revision.touch(); m_mesh = std::make_shared<const TriangleMesh>(); m_is_splittable = -1; }
     const std::shared_ptr<const TriangleMesh>& get_mesh_shared_ptr() const { return m_mesh; }
     // Configuration parameters specific to an object model geometry or a modifier volume, 
     // overriding the global Slic3r settings and the ModelObject settings.
@@ -1192,6 +1194,8 @@ private:
     ModelObject*                    	object;
     // The triangular model.
     std::shared_ptr<const TriangleMesh> m_mesh;
+    // Retires before m_mesh is destroyed; never serialized or shared with copied volumes.
+    GeometryRevision m_geometry_revision;
     // Is it an object to be printed, or a modifier volume?
     ModelVolumeType                 	m_type;
     t_model_material_id             	m_material_id;
@@ -1350,6 +1354,7 @@ private:
 	}
 	template<class Archive> void load(Archive &ar) {
 		bool has_convex_hull;
+        m_geometry_revision.touch();
         // BBS: add backup, check modify
         bool mesh_changed = false;
         auto tr = m_transformation;

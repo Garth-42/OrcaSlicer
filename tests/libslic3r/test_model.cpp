@@ -200,3 +200,29 @@ TEST_CASE("Repairing a part replaces its mesh only when the repair changes it", 
     CHECK_FALSE(stats.modified);
     CHECK(valid->id() == valid_id);
 }
+
+TEST_CASE("Geometry initialization detaches shared volume meshes and retires their stamps", "[Model][PrepareSelection]")
+{
+    Model model;
+    ModelObject* object = model.add_object();
+    ModelVolume* original = object->add_volume(make_cube(10, 10, 10), ModelVolumeType::MODEL_PART, false);
+    ModelVolume* copy = object->add_volume_with_shared_mesh(*original);
+    const auto original_stamp = original->geometry_stamp();
+    const auto copy_stamp = copy->geometry_stamp();
+    const Vec3f original_vertex = original->mesh().its.vertices.front();
+    REQUIRE(&original->mesh() == &copy->mesh());
+
+    SECTION("centering a copy preserves the original source") {
+        copy->center_geometry_after_creation();
+    }
+    SECTION("scaling a copy preserves the original source") {
+        copy->scale_geometry_after_creation(2.f);
+    }
+    CHECK(original_stamp.valid());
+    CHECK_FALSE(copy_stamp.valid());
+    CHECK(&original->mesh() != &copy->mesh());
+    CHECK_THAT((original->mesh().its.vertices.front() - original_vertex).norm(), Catch::Matchers::WithinAbs(0., 1e-7));
+
+    original->set_mesh(make_cube(5, 5, 5));
+    CHECK_FALSE(original_stamp.valid());
+}
