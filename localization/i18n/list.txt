@@ -61,6 +61,7 @@ src/slic3r/GUI/Gizmos/GLGizmoFdmSupports.hpp
 src/slic3r/GUI/Gizmos/GLGizmoFlatten.cpp
 src/slic3r/GUI/Gizmos/GLGizmoMmuSegmentation.cpp
 src/slic3r/GUI/Gizmos/GLGizmoMmuSegmentation.hpp
+src/slic3r/GUI/Gizmos/GLGizmoFaceSelect.cpp
 src/slic3r/GUI/Gizmos/GLGizmoFuzzySkin.cpp
 src/slic3r/GUI/Gizmos/GLGizmoFuzzySkin.hpp
 src/slic3r/GUI/Gizmos/GLGizmoPaintedModifier.cpp

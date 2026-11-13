@@ -91,6 +91,23 @@ TEST_CASE("Selection store changes its revision only when the content changes", 
     CHECK_FALSE(store.clear_faces());
 }
 
+TEST_CASE("Selection store tracks changes of the face selection separately", "[PluginSelection]")
+{
+    SelectionSnapshotStore store;
+    TwoPartModel           scene;
+    const auto             faces_revision = store.faces_revision();
+
+    SelectedItem item;
+    item.object_index = 0;
+    REQUIRE(store.set_items(SelectionSnapshotMode::Instance, {item}));
+    CHECK(store.faces_revision() == faces_revision);
+
+    REQUIRE(store.set_faces(scene.faces(0, {1})));
+    CHECK(store.faces_revision() == faces_revision + 1);
+    REQUIRE(store.clear_faces());
+    CHECK(store.faces_revision() == faces_revision + 2);
+}
+
 TEST_CASE("Selection store normalizes the triangles of a face selection", "[PluginSelection]")
 {
     SelectionSnapshotStore store;
@@ -178,7 +195,8 @@ TEST_CASE("Plugin host API exposes the Prepare tab selection to Python", "[Plugi
 {
     py::module_ orca = import_orca_module();
     py::object  host = orca.attr("host");
-    for (const char* name : {"selection", "Selection", "SelectedItem", "SelectedFaces", "SelectionMode"}) {
+    for (const char* name : {"selection", "Selection", "SelectedItem", "SelectedFaces", "SelectionMode", "set_face_selection",
+                             "clear_face_selection"}) {
         CAPTURE(name);
         REQUIRE(py::hasattr(host, name));
     }
@@ -226,6 +244,10 @@ TEST_CASE("Plugin host API exposes the Prepare tab selection to Python", "[Plugi
     CHECK(faces[0].attr("count").cast<size_t>() == 2);
     CHECK(py::len(selection.attr("items")()) == 1);
     CHECK(host.attr("selection")().attr("is_empty")().cast<bool>());
+
+    // Setting the face selection needs the model of the running app, which a test does not have.
+    CHECK_THROWS_AS(host.attr("set_face_selection")(0, 0, py::list()), py::error_already_set);
+    CHECK_THROWS_AS(host.attr("clear_face_selection")(), py::error_already_set);
 
     bool have_numpy = false;
     try {

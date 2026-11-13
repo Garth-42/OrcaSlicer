@@ -76,6 +76,9 @@ void GLGizmoFaceSelect::render_painter_gizmo()
 {
     const Selection& selection = m_parent.get_selection();
 
+    if (!is_painting() && !m_triangle_selectors.empty() && SelectionSnapshotStore::instance().faces_revision() != m_faces_revision)
+        update_from_model_object(false);
+
     glsafe(::glEnable(GL_BLEND));
     glsafe(::glEnable(GL_DEPTH_TEST));
 
@@ -199,7 +202,7 @@ void GLGizmoFaceSelect::on_render_input_window(float x, float y, float bottom_li
     }
 
     ImGui::Separator();
-    m_imgui->text(format_wxstr(_L("Selected triangles: %1%"), m_selected_count));
+    m_imgui->text(format_wxstr(_L_PLURAL("%1% triangle selected", "%1% triangles selected", m_selected_count), m_selected_count));
     ImGui::Separator();
 
     GLGizmoUtils::render_tooltip_button(m_imgui, m_parent, *shortcuts, x, y);
@@ -228,6 +231,7 @@ void GLGizmoFaceSelect::on_render_input_window(float x, float y, float bottom_li
         m_selected_count = 0;
         if (store.clear_faces())
             fire_selection_changed("faces", store.revision());
+        m_faces_revision = store.faces_revision();
         m_parent.set_as_dirty();
     }
     m_imgui->disabled_end();
@@ -275,6 +279,7 @@ void GLGizmoFaceSelect::update_model_object()
         changed |= store.set_faces(std::move(entry));
     }
 
+    m_faces_revision = store.faces_revision();
     if (changed)
         fire_selection_changed("faces", store.revision());
 }
@@ -289,6 +294,7 @@ void GLGizmoFaceSelect::update_from_model_object(bool first_update)
 
     const std::vector<ColorRGBA>  ebt_colors = {GLVolume::NEUTRAL_COLOR, SELECTED_COLOR, TriangleSelectorGUI::blockers_color};
     const SelectionSnapshotStore& store      = SelectionSnapshotStore::instance();
+    m_faces_revision = store.faces_revision();
     for (const ModelVolume* mv : mo->volumes) {
         if (!mv->is_model_part())
             continue;

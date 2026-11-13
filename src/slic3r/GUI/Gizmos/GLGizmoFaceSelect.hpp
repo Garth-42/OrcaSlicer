@@ -7,6 +7,7 @@
 #include "libslic3r/TriangleSelector.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <utility>
@@ -53,6 +54,9 @@ private:
     wchar_t m_current_tool = 0;
     // Triangles selected on the edited object, for the panel.
     size_t  m_selected_count = 0;
+    // The store's face revision the selectors match. A plugin may set the face selection while
+    // the gizmo is open; the selectors are then rebuilt from the store.
+    std::uint64_t m_faces_revision = 0;
 
     std::map<std::string, wxString>            m_desc;
     std::vector<std::pair<wxString, wxString>> m_shortcuts_brush;
