@@ -72,6 +72,12 @@ and rendering are shared with the paint gizmos.
 - The model is never modified: nothing is rescheduled for slicing, the project is not
   marked dirty, and no undo snapshot is taken. `GLGizmoPainterBase::stroke_takes_snapshot`
   exists for this; it defaults to the behavior of the paint gizmos.
+- Undo snapshots record which gizmo is open, and something other than the gizmo can take
+  one while it is open (an object list action, another gizmo being entered, Undo capturing
+  the current state). `GLGizmoBase::is_saved_in_snapshots` is false for this gizmo, so
+  such a snapshot records no open gizmo and Undo / Redo never reopens the tool. Undo or
+  Redo while the tool is open applies to the model and closes the tool; the face
+  selection stays in the store unless the mesh it refers to is gone.
 - Activation follows the paint gizmos: FFF printer, one object instance selected. Faces
   on several objects are selected by switching objects; entries accumulate in the store.
 - The highlight is drawn only while the gizmo is open. The selection itself outlives the

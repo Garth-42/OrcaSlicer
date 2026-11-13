@@ -33,8 +33,10 @@ protected:
 
     wxString handle_snapshot_action_name(bool shift_down, Button button_down) const override;
 
-    // Nothing in the model changes, so neither entering, leaving nor a stroke is an undo step.
+    // Nothing in the model changes, so neither entering, leaving nor a stroke is an undo step, and
+    // a snapshot something else takes while the gizmo is open does not record it as open.
     bool wants_enter_leave_snapshots() const override { return false; }
+    bool is_saved_in_snapshots() const override { return false; }
     bool stroke_takes_snapshot() const override { return false; }
 
     EnforcerBlockerType get_left_button_state_type() const override { return EnforcerBlockerType::ENFORCER; }

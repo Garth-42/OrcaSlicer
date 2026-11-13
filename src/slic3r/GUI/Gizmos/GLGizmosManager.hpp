@@ -269,9 +269,11 @@ public:
         if (!m_enabled)
             return;
 
-        ar(m_current);
+        const bool saved = m_current != Undefined && !m_gizmos.empty() && m_gizmos[m_current]->is_saved_in_snapshots();
+        const EType current = saved ? m_current : Undefined;
+        ar(current);
 
-        if (m_current != Undefined && !m_gizmos.empty())
+        if (saved)
             m_gizmos[m_current]->save(ar);
     }
 

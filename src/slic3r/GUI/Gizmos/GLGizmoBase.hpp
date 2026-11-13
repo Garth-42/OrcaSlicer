@@ -185,6 +185,9 @@ public:
     bool is_selectable() const { return on_is_selectable(); }
     CommonGizmosDataID get_requirements() const { return on_get_requirements(); }
     virtual bool wants_enter_leave_snapshots() const { return false; }
+    // False for a gizmo that is no part of undo / redo. A snapshot taken while it is open, whatever
+    // takes it, then records no open gizmo, so Undo / Redo never reopens it.
+    virtual bool is_saved_in_snapshots() const { return true; }
     // True when what on_render() draws would change if the cursor moved.
     virtual bool render_follows_cursor() const { return false; }
     virtual std::string get_gizmo_entering_text() const { assert(false); return ""; }
