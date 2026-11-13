@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: build/tests
+      # Tag, branch, or SHA the artifact was built from; empty checks out the triggering commit.
+      ref:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   unit_tests:
@@ -28,11 +33,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          # tests/data is referenced by absolute path (TEST_DATA_DIR).
+          ref: ${{ inputs.ref }}
+          # tests/data (TEST_DATA_DIR) and resources/ (profiles, nozzle data) are
+          # referenced by absolute path at runtime.
           sparse-checkout: |
             .github
             scripts
             tests
+            resources
       - name: Apt-Install Dependencies
         if: runner.os == 'Linux' && !vars.SELF_HOSTED
         uses: ./.github/actions/apt-install-deps
@@ -50,8 +58,8 @@ jobs:
         shell: bash
         run: |
           tar -xvf build_tests.tar
-          # Multi-config generators (Windows/macOS) need a config; Linux is single-config.
-          scripts/run_unit_tests.sh "${{ inputs.test-dir }}" "${{ runner.os != 'Linux' && 'Release' || '' }}"
+          # Multi-config generators need a config; a single-config build ignores it.
+          scripts/run_unit_tests.sh "${{ inputs.test-dir }}" Release
       - name: Upload Test Logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@v7

@@ -1,0 +1,81 @@
+name: Build and test a ref
+
+# Builds any tag, branch, or SHA with the workflows of the dispatching branch and
+# runs its unit tests. Use it for branches whose own workflow files cannot run here.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag, branch, or SHA to build'
+        type: string
+        required: true
+      linux:
+        description: 'Build and test Linux x86_64'
+        type: boolean
+        default: true
+      windows:
+        description: 'Build and test Windows x64'
+        type: boolean
+        default: true
+      macos:
+        description: 'Build and test macOS arm64'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_linux:
+    name: Build Linux x86_64
+    if: ${{ inputs.linux }}
+    uses: ./.github/workflows/build_check_cache.yml
+    with:
+      os: ${{ vars.SELF_HOSTED && 'orca-lnx-server' || 'ubuntu-24.04' }}
+      arch: ""
+      ref: ${{ inputs.ref }}
+    secrets: inherit
+  build_windows:
+    name: Build Windows x64
+    if: ${{ inputs.windows }}
+    uses: ./.github/workflows/build_check_cache.yml
+    with:
+      os: ${{ vars.SELF_HOSTED && 'orca-win-server' || 'windows-latest' }}
+      arch: x64
+      ref: ${{ inputs.ref }}
+    secrets: inherit
+  build_macos:
+    name: Build macOS arm64
+    if: ${{ inputs.macos }}
+    uses: ./.github/workflows/build_check_cache.yml
+    with:
+      os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-15' }}
+      arch: arm64
+      ref: ${{ inputs.ref }}
+    secrets: inherit
+  unit_tests_linux:
+    name: Linux x86_64
+    needs: build_linux
+    uses: ./.github/workflows/unit_tests.yml
+    with:
+      os: ${{ vars.SELF_HOSTED && 'orca-lnx-server' || 'ubuntu-24.04' }}
+      artifact: ${{ github.sha }}-tests-linux-x86_64
+      ref: ${{ inputs.ref }}
+  unit_tests_windows:
+    name: Windows x64
+    needs: build_windows
+    uses: ./.github/workflows/unit_tests.yml
+    with:
+      os: ${{ vars.SELF_HOSTED && 'orca-win-server' || 'windows-latest' }}
+      artifact: ${{ github.sha }}-tests-windows-x64
+      ref: ${{ inputs.ref }}
+  unit_tests_macos:
+    name: macOS arm64
+    needs: build_macos
+    uses: ./.github/workflows/unit_tests.yml
+    with:
+      os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-15' }}
+      artifact: ${{ github.sha }}-tests-macos-arm64
+      test-dir: build/arm64/tests
+      ref: ${{ inputs.ref }}
