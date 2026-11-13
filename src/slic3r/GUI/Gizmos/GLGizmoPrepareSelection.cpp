@@ -994,7 +994,7 @@ struct GLGizmoPrepareSelection::Impl
         }
         if (selected && selected == displayed && hidden_by_clipping)
             ImGui::TextWrapped("%s", _u8L("The selection is retained but hidden by clipping.").c_str());
-        ImGui::End();
+        g.GizmoImguiEnd();
         ImGuiWrapper::pop_toolbar_style();
     }
 };
