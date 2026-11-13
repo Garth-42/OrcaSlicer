@@ -2318,6 +2318,7 @@ void Selection::update_valid()
 
 void Selection::update_type()
 {
+    ++m_content_revision;
     m_cache.content.clear();
     m_type = Mixed;
 

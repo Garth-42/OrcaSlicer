@@ -193,6 +193,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/Gizmos/GLGizmoFdmSupports.hpp
     GUI/Gizmos/GLGizmoFlatten.cpp
     GUI/Gizmos/GLGizmoFlatten.hpp
+    GUI/Gizmos/GLGizmoFaceSelect.cpp
+    GUI/Gizmos/GLGizmoFaceSelect.hpp
     GUI/Gizmos/GLGizmoFuzzySkin.cpp
     GUI/Gizmos/GLGizmoFuzzySkin.hpp
     GUI/Gizmos/GLGizmoMeasure.cpp
@@ -530,6 +532,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/SettingsIndex.hpp
     GUI/Selection.cpp
     GUI/Selection.hpp
+    GUI/SelectionSnapshot.cpp
+    GUI/SelectionSnapshot.hpp
     GUI/SelectMachine.cpp
     GUI/SelectMachine.hpp
     GUI/PrePrintChecker.hpp
@@ -698,6 +702,7 @@ set(SLIC3R_GUI_SOURCES
     plugin/host/PluginHostMesh.hpp
     plugin/host/PluginHostModel.cpp
     plugin/host/PluginHostPresets.cpp
+    plugin/host/PluginHostSelection.cpp
     plugin/host/PluginHostSlicing.cpp
     plugin/host/PluginHostUi.cpp
     plugin/host/PluginHostUi.hpp
