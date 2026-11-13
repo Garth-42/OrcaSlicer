@@ -3163,7 +3163,7 @@ void ModelVolume::scale_geometry_after_creation(const Vec3f& versor)
     m_geometry_revision.touch();
     if (m_mesh.use_count() > 1) m_mesh = std::make_shared<TriangleMesh>(*m_mesh);
 	const_cast<TriangleMesh*>(m_mesh.get())->scale(versor);
-    if (m_convex_hull->empty())
+    if (!m_convex_hull || m_convex_hull->empty())
         //BBS: recompute the convex hull if it is null for previous too small
         this->calculate_convex_hull();
     else {

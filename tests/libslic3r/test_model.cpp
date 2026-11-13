@@ -206,10 +206,13 @@ TEST_CASE("Geometry initialization detaches shared volume meshes and retires the
     Model model;
     ModelObject* object = model.add_object();
     ModelVolume* original = object->add_volume(make_cube(10, 10, 10), ModelVolumeType::MODEL_PART, false);
-    ModelVolume* copy = object->add_volume_with_shared_mesh(*original);
+    const bool share_hull = GENERATE(false, true);
+    CAPTURE(share_hull);
+    ModelVolume* copy = share_hull ? object->add_volume(*original) : object->add_volume_with_shared_mesh(*original);
     const auto original_stamp = original->geometry_stamp();
     const auto copy_stamp = copy->geometry_stamp();
     const Vec3f original_vertex = original->mesh().its.vertices.front();
+    const Vec3f original_hull_vertex = original->get_convex_hull().its.vertices.front();
     REQUIRE(&original->mesh() == &copy->mesh());
 
     SECTION("centering a copy preserves the original source") {
@@ -217,11 +220,15 @@ TEST_CASE("Geometry initialization detaches shared volume meshes and retires the
     }
     SECTION("scaling a copy preserves the original source") {
         copy->scale_geometry_after_creation(2.f);
+        CHECK_FALSE(copy->get_convex_hull().empty());
     }
     CHECK(original_stamp.valid());
     CHECK_FALSE(copy_stamp.valid());
     CHECK(&original->mesh() != &copy->mesh());
     CHECK_THAT((original->mesh().its.vertices.front() - original_vertex).norm(), Catch::Matchers::WithinAbs(0., 1e-7));
+    CHECK_THAT((original->get_convex_hull().its.vertices.front() - original_hull_vertex).norm(), Catch::Matchers::WithinAbs(0., 1e-7));
+    if (share_hull)
+        CHECK(&original->get_convex_hull() != &copy->get_convex_hull());
 
     original->set_mesh(make_cube(5, 5, 5));
     CHECK_FALSE(original_stamp.valid());
