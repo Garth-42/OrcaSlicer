@@ -87,16 +87,20 @@ public:
 
     SelectionSnapshot snapshot() const;
     std::uint64_t     revision() const;
+    // Advances with the face selection only, whoever changed it.
+    std::uint64_t     faces_revision() const;
 
 private:
     mutable std::mutex              m_mutex;
-    std::uint64_t                   m_revision = 0;
+    std::uint64_t                   m_revision       = 0;
+    std::uint64_t                   m_faces_revision = 0;
     SelectionSnapshotMode           m_mode     = SelectionSnapshotMode::Instance;
     std::vector<SelectedItem>       m_items;
     std::map<size_t, SelectedFaces> m_faces; // by volume id
 };
 
-// Fires LifecycleEvent::SelectionChanged. `source` is "objects" or "faces".
+// Fires LifecycleEvent::SelectionChanged. `source` is "objects", "faces" (picked by the user) or
+// "plugin" (faces set by a plugin).
 void fire_selection_changed(const char* source, std::uint64_t revision);
 
 } // namespace GUI

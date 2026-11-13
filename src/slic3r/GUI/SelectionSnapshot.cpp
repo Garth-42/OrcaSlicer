@@ -53,6 +53,7 @@ bool SelectionSnapshotStore::set_faces(SelectedFaces entry)
         it->second = std::move(entry);
     }
     ++m_revision;
+    ++m_faces_revision;
     return true;
 }
 
@@ -63,6 +64,7 @@ bool SelectionSnapshotStore::clear_faces()
         return false;
     m_faces.clear();
     ++m_revision;
+    ++m_faces_revision;
     return true;
 }
 
@@ -75,6 +77,7 @@ bool SelectionSnapshotStore::clear_object_faces(size_t object_id)
     if (m_faces.size() == before)
         return false;
     ++m_revision;
+    ++m_faces_revision;
     return true;
 }
 
@@ -108,8 +111,10 @@ bool SelectionSnapshotStore::refresh_faces(const Model& model)
     }
     changed |= kept.size() != m_faces.size();
     m_faces = std::move(kept);
-    if (changed)
+    if (changed) {
         ++m_revision;
+        ++m_faces_revision;
+    }
     return changed;
 }
 
@@ -153,6 +158,12 @@ std::uint64_t SelectionSnapshotStore::revision() const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_revision;
+}
+
+std::uint64_t SelectionSnapshotStore::faces_revision() const
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_faces_revision;
 }
 
 void fire_selection_changed(const char* source, std::uint64_t revision)
