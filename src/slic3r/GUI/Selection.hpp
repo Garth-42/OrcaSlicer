@@ -159,6 +159,8 @@ private:
     bool m_valid;
     EMode m_mode;
     EType m_type;
+    // Advanced whenever the selected set may have changed, see update_type().
+    unsigned int m_content_revision = 0;
     // set of indices to m_volumes
     IndicesList m_list;
     Cache m_cache;
@@ -221,6 +223,8 @@ public:
 
     EMode get_mode() const { return m_mode; }
     void set_mode(EMode mode) { m_mode = mode; }
+    // Lets an observer poll for a change of the selected set without comparing it.
+    unsigned int content_revision() const { return m_content_revision; }
 
     int query_real_volume_idx_from_other_view(unsigned int object_idx, unsigned int instance_idx, unsigned int model_volume_idx);
     void add(unsigned int volume_idx, bool as_single_selection = true, bool check_for_already_contained = false);

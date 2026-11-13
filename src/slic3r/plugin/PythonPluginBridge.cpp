@@ -425,6 +425,7 @@ void bind_python_api(pybind11::module_& m)
         .value("PrintJobFinished", LifecycleEvent::PrintJobFinished)
         .value("SendJobStarted", LifecycleEvent::SendJobStarted)
         .value("SendJobFinished", LifecycleEvent::SendJobFinished)
+        .value("SelectionChanged", LifecycleEvent::SelectionChanged)
         .export_values();
 
     py::enum_<LifecycleEvtCode>(m, "LifecycleEvtCode", "Outcome code accompanying a LifecycleEventContext")

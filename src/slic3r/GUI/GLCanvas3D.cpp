@@ -11,6 +11,7 @@
 #include <utility>
 #include "libslic3r/Slicing.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmosManager.hpp"
+#include "slic3r/GUI/SelectionSnapshot.hpp"
 #include <cstddef>
 #include <array>
 #include <cassert>
@@ -2143,7 +2144,8 @@ void GLCanvas3D::toggle_model_objects_visibility(bool visible, const ModelObject
                     if (  (gizmo_type == GLGizmosManager::FdmSupports
                         || gizmo_type == GLGizmosManager::Seam
                         || gizmo_type == GLGizmosManager::Cut
-                        || gizmo_type == GLGizmosManager::FuzzySkin)
+                        || gizmo_type == GLGizmosManager::FuzzySkin
+                        || gizmo_type == GLGizmosManager::FaceSelect)
                         && !vol->is_modifier) {
                         vol->force_neutral_color = true;
                     }
@@ -2867,7 +2869,8 @@ void GLCanvas3D::_render_scene(const Camera& camera, const Size& cnv_size)
         const bool show_exclusion_intersections = m_show_bed &&
             (!m_main_toolbar.is_enabled() ||
              (gizmo_type != GLGizmosManager::FdmSupports && gizmo_type != GLGizmosManager::Seam &&
-              gizmo_type != GLGizmosManager::MmSegmentation && gizmo_type != GLGizmosManager::FuzzySkin));
+              gizmo_type != GLGizmosManager::MmSegmentation && gizmo_type != GLGizmosManager::FuzzySkin &&
+              gizmo_type != GLGizmosManager::FaceSelect));
         if (show_exclusion_intersections)
             wxGetApp().plater()->get_partplate_list().render_exclusion_volume_intersections(
                 camera.get_view_matrix(), camera.get_projection_matrix());
@@ -3205,6 +3208,8 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
         return;
     }
 
+    // Volumes may have been replaced or reordered: have the published face selection revalidated.
+    m_selection_snapshot_dirty = true;
     m_hover_volume_idxs.clear();
 
     struct ModelVolumeState {
@@ -4024,10 +4029,61 @@ void GLCanvas3D::unbind_event_handlers()
     }
 }
 
+void GLCanvas3D::_publish_selection_snapshot()
+{
+    if (m_model == nullptr)
+        return;
+    const unsigned int revision = m_selection.content_revision();
+    if (revision == m_published_selection_revision && !m_selection_snapshot_dirty)
+        return;
+    m_published_selection_revision = revision;
+    m_selection_snapshot_dirty     = false;
+
+    const ModelObjectPtrs&    objects = m_model->objects;
+    std::vector<SelectedItem> items;
+    auto add_item = [&objects, &items](int object_idx, int instance_idx, int volume_idx) {
+        // Skips the wipe tower and anything else that is not an object of the model.
+        if (object_idx < 0 || object_idx >= int(objects.size()))
+            return;
+        const ModelObject* object = objects[object_idx];
+        if (instance_idx >= int(object->instances.size()) || volume_idx >= int(object->volumes.size()))
+            return;
+        SelectedItem item;
+        item.object_index   = object_idx;
+        item.instance_index = instance_idx;
+        item.volume_index   = volume_idx;
+        item.object_id      = object->id().id;
+        if (volume_idx >= 0)
+            item.volume_id = object->volumes[volume_idx]->id().id;
+        items.push_back(item);
+    };
+    const bool by_volume = m_selection.get_mode() == Selection::Volume;
+    if (by_volume) {
+        for (unsigned int idx : m_selection.get_volume_idxs()) {
+            const GLVolume* volume = m_selection.get_volume(idx);
+            if (volume != nullptr && volume->volume_idx() >= 0)
+                add_item(volume->object_idx(), volume->instance_idx(), volume->volume_idx());
+        }
+    } else {
+        for (const auto& [object_idx, instance_idxs] : m_selection.get_content())
+            for (int instance_idx : instance_idxs)
+                add_item(object_idx, instance_idx, -1);
+    }
+
+    SelectionSnapshotStore& store = SelectionSnapshotStore::instance();
+    if (store.refresh_faces(*m_model))
+        fire_selection_changed("faces", store.revision());
+    if (store.set_items(by_volume ? SelectionSnapshotMode::Volume : SelectionSnapshotMode::Instance, std::move(items)))
+        fire_selection_changed("objects", store.revision());
+}
+
 void GLCanvas3D::on_idle(wxIdleEvent& evt)
 {
     if (!m_initialized || m_benchmarking)
         return;
+
+    if (m_canvas_type == CanvasView3D)
+        _publish_selection_snapshot();
 
     // Toolbar states, notifications and ImGui's own layout settling only touch the overlay.
     m_overlay_dirty |= m_main_toolbar.update_items_state();
@@ -5105,7 +5161,8 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
                     && m_gizmos.get_current_type() != GLGizmosManager::Seam
                     && m_gizmos.get_current_type() != GLGizmosManager::Cut
                     && m_gizmos.get_current_type() != GLGizmosManager::MmSegmentation
-                    && m_gizmos.get_current_type() != GLGizmosManager::FuzzySkin) {
+                    && m_gizmos.get_current_type() != GLGizmosManager::FuzzySkin
+                    && m_gizmos.get_current_type() != GLGizmosManager::FaceSelect) {
                     m_rectangle_selection.start_dragging(m_mouse.position, evt.ShiftDown() ? GLSelectionRectangle::Select : GLSelectionRectangle::Deselect);
 
                     if (!has_mouse_capture())  // ORCA keep tracking mouse position while drag active and cursor not in window bounds
@@ -5305,7 +5362,7 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
                 const Vec3d rot = (Vec3d(pos.x(), pos.y(), 0.) - m_mouse.drag.start_position_3D) * (PI * TRACKBALLSIZE / 180.) * mult;
                 if (this->m_canvas_type == ECanvasType::CanvasAssembleView || m_gizmos.get_current_type() == GLGizmosManager::FdmSupports ||
                     m_gizmos.get_current_type() == GLGizmosManager::Seam || m_gizmos.get_current_type() == GLGizmosManager::MmSegmentation ||
-                    m_gizmos.get_current_type() == GLGizmosManager::FuzzySkin) {
+                    m_gizmos.get_current_type() == GLGizmosManager::FuzzySkin || m_gizmos.get_current_type() == GLGizmosManager::FaceSelect) {
                     // Orca: Reuse the centralized pivot policy for scene-oriented tools.
                     const std::optional<Vec3d> rotate_target = get_camera_orbit_target(ECameraNavigationType::Mouse);
                     if (rotate_target.has_value())
@@ -12159,7 +12216,8 @@ std::optional<Vec3d> GLCanvas3D::get_camera_orbit_target(ECameraNavigationType n
     const GLGizmosManager::EType gizmo_type = m_gizmos.get_current_type();
     const bool use_scene_target = m_canvas_type == ECanvasType::CanvasAssembleView ||
         gizmo_type == GLGizmosManager::FdmSupports || gizmo_type == GLGizmosManager::Seam ||
-        gizmo_type == GLGizmosManager::MmSegmentation || gizmo_type == GLGizmosManager::FuzzySkin;
+        gizmo_type == GLGizmosManager::MmSegmentation || gizmo_type == GLGizmosManager::FuzzySkin ||
+        gizmo_type == GLGizmosManager::FaceSelect;
     if (use_scene_target) {
         if (!m_selection.is_empty())
             return m_selection.get_bounding_box().center();

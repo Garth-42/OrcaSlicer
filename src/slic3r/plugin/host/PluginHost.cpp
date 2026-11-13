@@ -39,6 +39,7 @@ void PluginHost::RegisterBindings(pybind11::module_& module)
     host_bindings::register_mesh(host);
     host_bindings::register_presets(host);
     host_bindings::register_model(host);
+    host_bindings::register_selection(host);
     host_bindings::register_app(host);
     host_bindings::register_plugin(host);
 

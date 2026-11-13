@@ -61,6 +61,10 @@ namespace Slic3r
         PrintJobFinished,
         SendJobStarted,
         SendJobFinished,
+
+        // Prepare tab selection: ctx.source is "objects" (objects/parts) or "faces" (Face selection
+        // tool). Appended last so the values of the events above do not move.
+        SelectionChanged,
     };
 
     // Scoped so callers must qualify (LifecycleEvtCode::Error, not ERROR) -- ERROR/OK collide with
@@ -151,6 +155,8 @@ namespace Slic3r
         case LifecycleEvent::PrintJobFinished: return "PrintJobFinished";
         case LifecycleEvent::SendJobStarted: return "SendJobStarted";
         case LifecycleEvent::SendJobFinished: return "SendJobFinished";
+
+        case LifecycleEvent::SelectionChanged: return "SelectionChanged";
         default: return "Unknown";
         }
     }

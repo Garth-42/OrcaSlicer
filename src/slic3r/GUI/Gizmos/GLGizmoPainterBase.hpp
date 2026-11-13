@@ -38,7 +38,8 @@ enum class PainterGizmoType {
     SEAM,
     MM_SEGMENTATION,
     FUZZY_SKIN,
-    TEXTURE_DISPLACEMENT
+    TEXTURE_DISPLACEMENT,
+    FACE_SELECT
 };
 
 class TriangleSelectorGUI : public TriangleSelector {
@@ -246,6 +247,8 @@ protected:
     void render_cursor_height_range(const Transform3d& trafo) const;
     //BBS: add logic to distinguish the first_time_update and later_update
     virtual void update_model_object() = 0;
+    // False for a gizmo whose strokes do not change the model, so there is nothing to undo.
+    virtual bool stroke_takes_snapshot() const { return true; }
     virtual void update_from_model_object(bool first_update) = 0;
 
     virtual ColorRGBA get_cursor_sphere_left_button_color() const  { return { 0.0f, 0.0f, 1.0f, 0.25f }; }

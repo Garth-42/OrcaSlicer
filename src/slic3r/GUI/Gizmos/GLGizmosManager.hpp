@@ -94,6 +94,7 @@ public:
         FdmSupports,
         Seam,
         FuzzySkin,
+        FaceSelect,
         MmSegmentation,
         TextureDisplacement,
         Emboss,

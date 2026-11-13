@@ -1643,6 +1643,11 @@ private:
     void _update_sla_shells_outside_state() { check_volumes_outside_state(); }
     void _set_warning_notification_if_needed(EWarning warning);
 
+    // Publishes the Prepare canvas selection to the SelectionSnapshotStore when it changed.
+    void _publish_selection_snapshot();
+    unsigned int m_published_selection_revision = (unsigned int)-1;
+    bool         m_selection_snapshot_dirty     = false;
+
     //BBS: add partplate print volume get function
     BoundingBoxf3 _get_current_partplate_print_volume();
 

@@ -18,12 +18,56 @@
 #include "libslic3r/ObjectID.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/TriangleMesh.hpp"
+#include "libslic3r/TriangleSelector.hpp"
+#include <cstdint>
+#include <vector>
 #include <pybind11/detail/common.h>
 #include <pybind11/detail/descr.h>
 
 namespace py = pybind11;
 
 namespace Slic3r {
+namespace {
+
+// The paint tools of the Prepare tab, each stored on the volume as a FacetsAnnotation.
+enum class PaintLayer { Support, Seam, MultiMaterial, FuzzySkin };
+
+const FacetsAnnotation& paint_layer(const ModelVolume& volume, PaintLayer layer)
+{
+    switch (layer) {
+    case PaintLayer::Support: return volume.supported_facets;
+    case PaintLayer::Seam: return volume.seam_facets;
+    case PaintLayer::MultiMaterial: return volume.mmu_segmentation_facets;
+    case PaintLayer::FuzzySkin: return volume.fuzzy_skin_facets;
+    }
+    throw py::value_error("unknown paint layer");
+}
+
+// The paint of one state on one volume. Paint can cover a part of a triangle, so it is the split
+// geometry plus, per piece, the mesh triangle it lies on. A value copy: it stays valid whatever
+// happens to the volume afterwards.
+struct PaintedFacets
+{
+    indexed_triangle_set its;
+    std::vector<int>     source;
+};
+
+std::shared_ptr<PaintedFacets> painted_facets(const ModelVolume& volume, PaintLayer layer, int state)
+{
+    if (state < int(EnforcerBlockerType::ENFORCER) || state > int(EnforcerBlockerType::ExtruderMax))
+        throw py::value_error("paint state must be between 1 and " + std::to_string(int(EnforcerBlockerType::ExtruderMax)));
+    auto                    out  = std::make_shared<PaintedFacets>();
+    const FacetsAnnotation& data = paint_layer(volume, layer);
+    if (!data.empty()) {
+        TriangleSelector selector(volume.mesh());
+        // The constructor already reset the selector.
+        selector.deserialize(data.get_data(), false);
+        out->its = selector.get_facets_strict(EnforcerBlockerType(state), &out->source);
+    }
+    return out;
+}
+
+} // namespace
 
 // The scene/document graph: Model -> ModelObject -> ModelInstance/ModelVolume.
 // Everything is bound py::nodelete — non-owning references into a graph owned
@@ -44,6 +88,39 @@ void host_bindings::register_model(py::module_& host)
         .value("PreciseSeamEnforced", ModelVolumeType::PRECISE_SEAM_ENFORCED)
         .value("PreciseSeamBlocked", ModelVolumeType::PRECISE_SEAM_BLOCKED)
         .value("PreciseSeamNeutral", ModelVolumeType::PRECISE_SEAM_NEUTRAL);
+
+    py::enum_<PaintLayer>(host, "PaintLayer")
+        .value("Support", PaintLayer::Support)
+        .value("Seam", PaintLayer::Seam)
+        .value("MultiMaterial", PaintLayer::MultiMaterial)
+        .value("FuzzySkin", PaintLayer::FuzzySkin);
+
+    py::class_<PaintedFacets, std::shared_ptr<PaintedFacets>>(host, "PaintedFacets",
+        "The paint of one state on one volume, in the volume's local coordinates.")
+        .def_property_readonly("count", [](const PaintedFacets& facets) { return facets.its.indices.size(); })
+        .def("vertices", [](py::object self) {
+            const PaintedFacets& facets = self.cast<const PaintedFacets&>();
+            return with_numpy([&] {
+                const std::vector<stl_vertex>& vertices = facets.its.vertices;
+                return py::object(make_readonly_rows<float, 3>(
+                    self, vertices.empty() ? nullptr : vertices.front().data(), static_cast<py::ssize_t>(vertices.size())));
+            });
+        }, "Read-only (K, 3) float32 ndarray of the vertices triangles() refers to. Requires numpy.")
+        .def("triangles", [](py::object self) {
+            const PaintedFacets& facets = self.cast<const PaintedFacets&>();
+            return with_numpy([&] {
+                const std::vector<stl_triangle_vertex_indices>& indices = facets.its.indices;
+                return py::object(make_readonly_rows<std::int32_t, 3>(
+                    self, indices.empty() ? nullptr : indices.front().data(), static_cast<py::ssize_t>(indices.size())));
+            });
+        }, "Read-only (M, 3) int32 ndarray of the painted pieces, rows into vertices(). Requires numpy.")
+        .def("source_triangle_indices", [](const PaintedFacets& facets) { return facets.source; },
+             "The mesh triangle each painted piece lies on, as a list parallel to triangles().")
+        .def("source_triangles", [](const PaintedFacets& facets) {
+            return with_numpy([&] {
+                return py::object(py::array_t<std::int32_t>(py::ssize_t(facets.source.size()), facets.source.data()));
+            });
+        }, "(M,) int32 ndarray (copy): the mesh triangle each painted piece lies on. Requires numpy.");
 
     py::class_<ModelVolume, std::unique_ptr<ModelVolume, py::nodelete>>(host, "ModelVolume")
         .def("id", [](const ModelVolume& volume) { return volume.id().id; })
@@ -87,6 +164,17 @@ void host_bindings::register_model(py::module_& host)
         .def("is_seam_painted", &ModelVolume::is_seam_painted)
         .def("is_mm_painted", &ModelVolume::is_mm_painted)
         .def("is_fuzzy_skin_painted", &ModelVolume::is_fuzzy_skin_painted)
+        // Paint states: Support and Seam use 1 = enforcer and 2 = blocker, FuzzySkin uses 1,
+        // MultiMaterial uses the 1-based filament number.
+        .def("painted_states", [](const ModelVolume& volume, PaintLayer layer) {
+            std::vector<int> states;
+            for (EnforcerBlockerType state : TriangleSelector::extract_used_facet_states(paint_layer(volume, layer).get_data()))
+                if (state != EnforcerBlockerType::NONE)
+                    states.push_back(int(state));
+            return states;
+        }, py::arg("layer"), "The paint states in use on this volume for a paint layer.")
+        .def("painted_facets", &painted_facets, py::arg("layer"), py::arg("state") = 1,
+             "The triangles painted with `state` on a paint layer, as a PaintedFacets copy.")
         .def("config_keys", [](const ModelVolume& volume) { return volume.config.keys(); })
         .def("config_value", [](const ModelVolume& volume, const std::string& key) {
             return config_value_or_none(volume.config.get(), key);
