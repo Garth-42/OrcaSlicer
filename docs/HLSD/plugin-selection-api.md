@@ -147,6 +147,9 @@ pf.source_triangle_indices()   # the same as list[int]
 FuzzySkin it is 1, for MultiMaterial it is the 1-based filament number. `painted_facets`
 returns a copy and follows the threading rules of the other `ModelVolume` bindings.
 
+`sandboxes/orca_selection_plugin_any.py` is a worked example: a docked panel that follows
+the selection, sets the face selection from Python, and self-tests these calls.
+
 The API needs no plugin permission: what it reads is of the same kind as the mesh geometry
 a plugin can already read, and what it writes is transient view state.
 
