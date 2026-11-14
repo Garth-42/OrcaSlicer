@@ -57,6 +57,8 @@ jobs:
   unit_tests_linux:
     name: Linux x86_64
     needs: build_linux
+    # The build job uploads the tests before its later steps, so run them even if one of those fails.
+    if: ${{ !cancelled() && inputs.linux }}
     uses: ./.github/workflows/unit_tests.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-lnx-server' || 'ubuntu-24.04' }}
@@ -65,6 +67,8 @@ jobs:
   unit_tests_windows:
     name: Windows x64
     needs: build_windows
+    # The build job uploads the tests before its later steps, so run them even if one of those fails.
+    if: ${{ !cancelled() && inputs.windows }}
     uses: ./.github/workflows/unit_tests.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-win-server' || 'windows-latest' }}
@@ -73,6 +77,8 @@ jobs:
   unit_tests_macos:
     name: macOS arm64
     needs: build_macos
+    # The build job uploads the tests before its later steps, so run them even if one of those fails.
+    if: ${{ !cancelled() && inputs.macos }}
     uses: ./.github/workflows/unit_tests.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-15' }}
