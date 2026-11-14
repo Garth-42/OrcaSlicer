@@ -1,0 +1,56 @@
+# Read by the session that drives the Windows test box. Placeholders in braces are filled
+# in by that session: {branch} is the branch slug (lowercase, "/" replaced by "-"),
+# {run_id} is its own id for one test run.
+app_name: OrcaSlicer
+repository: Garth-42/OrcaSlicer
+release_tag_pattern: nightly-{branch}
+release_download_url: https://github.com/Garth-42/OrcaSlicer/releases/download/nightly-{branch}/{asset}
+
+assets:
+  app: OrcaSlicer-windows-x64.zip
+  build_info: build-info.json
+  test_plans: test-plans.zip
+
+install:
+  type: zip
+  # Extraction is the whole install: no installer, registry keys or services.
+  silent_args: ""
+  install_dir: C:\TestRuns\{run_id}\app
+  # The zip has no top-level folder; orca-slicer.exe lands directly in install_dir.
+  # install_dir must be readable by the local user "claude".
+
+launch:
+  exe: orca-slicer.exe
+  # --datadir keeps settings, cache and logs of the run in one folder, away from %APPDATA%.
+  args: ["--datadir", "C:\\TestRuns\\{run_id}\\data"]
+  working_dir: C:\TestRuns\{run_id}\app
+  startup_wait_seconds: 90
+  # Run in the interactive desktop session of the local user "claude", never as SYSTEM.
+  run_as: claude
+  main_window_title_contains: OrcaSlicer
+
+logs:
+  - C:\TestRuns\{run_id}\data\log
+  # Used only when the app is started without --datadir:
+  - "%APPDATA%\\OrcaSlicer\\log"
+
+settings_dirs:
+  - C:\TestRuns\{run_id}\data
+  - "%APPDATA%\\OrcaSlicer"
+
+requirements:
+  opengl: true
+  # The app needs OpenGL 2.0 or newer for its window and loads mesa\opengl32.dll from its
+  # own folder when the system offers less. The zip carries that file unless the build
+  # was dispatched with bundle-mesa off; build-info.json says so in mesa_bundled.
+  needs_mesa: true
+  runtimes:
+    - name: Microsoft Edge WebView2 Runtime
+      why: The first-run setup wizard and several dialogs are web pages.
+      silent_install: MicrosoftEdgeWebview2Setup.exe /silent /install
+    - name: Visual C++ 2015-2022 Redistributable (x64)
+      why: The zip carries the runtime DLLs it was built with; install this only if the app reports a missing DLL.
+      silent_install: vc_redist.x64.exe /install /quiet /norestart
+
+test_data_dir: tests/computer-use/data
+# Inside test-plans.zip the same files are under data\.

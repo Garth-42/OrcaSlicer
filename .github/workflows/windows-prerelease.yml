@@ -1,0 +1,179 @@
+name: Windows pre-release (test box)
+
+# Builds the Windows x64 app with the regular build chain and publishes it as a rolling
+# pre-release, nightly-<branch-slug>, for the computer-use test box (tests/computer-use/).
+# The box downloads release assets anonymously; workflow artifacts would need a token.
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'claude/**'
+  workflow_dispatch:
+    inputs:
+      bundle-mesa:
+        description: 'Bundle Mesa (software OpenGL) as mesa/opengl32.dll'
+        type: boolean
+        default: true
+
+concurrency:
+  group: windows-prerelease-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows x64
+    # The same permissions build_all.yml gives its Windows build.
+    permissions:
+      actions: write
+      contents: write
+      id-token: write
+    uses: ./.github/workflows/build_check_cache.yml
+    with:
+      os: windows-latest
+      arch: x64
+      compiler: clang
+    secrets: inherit
+
+  publish:
+    name: Publish pre-release
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    env:
+      APP_NAME: OrcaSlicer
+      APP_ZIP: OrcaSlicer-windows-x64.zip
+      # Mesa's llvmpipe build as PrusaSlicer ships it. The app loads mesa\opengl32.dll by
+      # itself when the system OpenGL is older than 2.0 (src/OrcaSlicer_app_msvc.cpp).
+      MESA_SOURCE_URL: https://github.com/prusa3d/PrusaSlicer/releases/download/version_2.9.7/PrusaSlicer-2.9.7.zip
+      BUNDLE_MESA: ${{ github.event_name != 'workflow_dispatch' || inputs.bundle-mesa }}
+    steps:
+      - name: Checkout test plans
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            tests/computer-use
+            version.inc
+          sparse-checkout-cone-mode: false
+
+      - name: Download the portable build
+        uses: actions/download-artifact@v8
+        with:
+          pattern: OrcaSlicer_Windows_V*_x64_portable
+          path: app
+          merge-multiple: true
+
+      - name: Bundle Mesa
+        if: env.BUNDLE_MESA == 'true'
+        shell: pwsh
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP 'mesa-source.zip'
+          curl.exe -sSL --fail --retry 3 -o $zip $env:MESA_SOURCE_URL
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($zip)
+          try {
+            $entry = $archive.Entries | Where-Object { $_.FullName -like '*mesa/opengl32.dll' } | Select-Object -First 1
+            if (-not $entry) { throw "mesa/opengl32.dll not found in $env:MESA_SOURCE_URL" }
+            New-Item -ItemType Directory -Force app/mesa | Out-Null
+            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, (Join-Path (Resolve-Path app/mesa) 'opengl32.dll'), $true)
+          } finally { $archive.Dispose() }
+          "Mesa software OpenGL (llvmpipe), MIT license. Taken unchanged from $env:MESA_SOURCE_URL" | Set-Content app/mesa/README.txt
+
+      - name: Check the layout
+        shell: pwsh
+        run: |
+          foreach ($file in 'orca-slicer.exe', 'OrcaSlicer.dll', 'resources') {
+            if (-not (Test-Path (Join-Path app $file))) { throw "app/$file is missing from the portable build" }
+          }
+          if ($env:BUNDLE_MESA -eq 'true' -and -not (Test-Path app/mesa/opengl32.dll)) { throw 'app/mesa/opengl32.dll is missing' }
+
+      # Neither check stops the release: a build that does not start is still worth having
+      # on the box for diagnosis. The results go into build-info.json and the run summary.
+      - name: Smoke test, command line
+        id: smoke_cli
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath app/orca-slicer.exe -ArgumentList '--help' -PassThru -RedirectStandardOutput help.txt -RedirectStandardError help-err.txt
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'orca-slicer.exe --help did not exit within 2 minutes' }
+          Get-Content help.txt -TotalCount 15
+          if ($p.ExitCode -ne 0) { throw "orca-slicer.exe --help exited with $($p.ExitCode)" }
+
+      - name: Smoke test, window opens
+        id: smoke_gui
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $data = Join-Path $env:RUNNER_TEMP 'orca-data'
+          $p = Start-Process -FilePath app/orca-slicer.exe -ArgumentList '--datadir', $data -PassThru
+          Start-Sleep -Seconds 75
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+          $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+          [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          New-Item -ItemType Directory -Force smoke | Out-Null
+          $bitmap.Save("$PWD/smoke/window.png")
+          Copy-Item (Join-Path $data 'log') smoke/log -Recurse -ErrorAction SilentlyContinue
+          $p.Refresh()
+          $alive = -not $p.HasExited
+          $titled = $alive -and $p.MainWindowHandle -ne 0
+          if ($alive) { Stop-Process -Id $p.Id -Force }
+          if (-not $alive) { throw "The app exited within 75 seconds (exit code $($p.ExitCode))" }
+          if (-not $titled) { throw 'The app is running but has no main window after 75 seconds' }
+
+      - name: Upload smoke test evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-prerelease-smoke
+          path: |
+            smoke
+            help.txt
+            help-err.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Write build-info.json
+        shell: pwsh
+        run: |
+          $version = if ((Get-Content version.inc -Raw) -match 'set\(SoftFever_VERSION "(.*?)"\)') { $matches[1] } else { 'unknown' }
+          [ordered]@{
+            app_name   = $env:APP_NAME
+            version    = $version
+            branch     = $env:GITHUB_REF_NAME
+            commit_sha = $env:GITHUB_SHA
+            build_time = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+            run_url    = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            mesa_bundled       = ($env:BUNDLE_MESA -eq 'true')
+            smoke_command_line = '${{ steps.smoke_cli.outcome }}'
+            smoke_window_opens = '${{ steps.smoke_gui.outcome }}'
+          } | ConvertTo-Json | Set-Content build-info.json -Encoding utf8
+          Get-Content build-info.json
+          "### Windows pre-release`n``````json`n$(Get-Content build-info.json -Raw)`n``````" | Add-Content $env:GITHUB_STEP_SUMMARY
+
+      - name: Package
+        shell: pwsh
+        run: |
+          Copy-Item build-info.json app/build-info.json
+          & 'C:/Program Files/7-Zip/7z.exe' a -tzip -mx=5 "$PWD/$env:APP_ZIP" ./app/*
+          if ($LASTEXITCODE -ne 0) { throw '7z failed on the app' }
+          & 'C:/Program Files/7-Zip/7z.exe' a -tzip "$PWD/test-plans.zip" ./tests/computer-use/*
+          if ($LASTEXITCODE -ne 0) { throw '7z failed on the test plans' }
+
+      - name: Publish the rolling pre-release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          slug=$(echo "$GITHUB_REF_NAME" | tr '[:upper:]' '[:lower:]' | tr '/' '-')
+          tag="nightly-$slug"
+          gh release delete "$tag" --cleanup-tag -y --repo "$GITHUB_REPOSITORY" || true
+          gh release create "$tag" --prerelease --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY" \
+            --title "$APP_NAME nightly ($GITHUB_REF_NAME)" \
+            --notes "Rolling test build of $GITHUB_REF_NAME at $GITHUB_SHA. Replaced on every run." \
+            "$APP_ZIP" build-info.json test-plans.zip
+          echo "Published $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"
