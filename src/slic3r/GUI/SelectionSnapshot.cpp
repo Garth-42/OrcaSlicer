@@ -94,6 +94,22 @@ bool SelectionSnapshotStore::refresh_faces(const Model& model)
         for (size_t volume_idx = 0; volume_idx < object->volumes.size(); ++volume_idx) {
             const ModelVolume* volume = object->volumes[volume_idx];
             auto               it     = m_faces.find(volume->id().id);
+            if (it == m_faces.end() && object->volumes.size() == 1) {
+                // ModelObject::delete_volume gives the last part left in an object a new id. Its
+                // entry is then the only one of this object that still refers to the part's mesh.
+                auto renamed = m_faces.end();
+                bool unique  = true;
+                for (auto other = m_faces.begin(); other != m_faces.end(); ++other)
+                    if (other->second.object_id == object->id().id && other->second.mesh.lock() == volume->get_mesh_shared_ptr()) {
+                        unique  = renamed == m_faces.end();
+                        renamed = other;
+                    }
+                if (renamed != m_faces.end() && unique) {
+                    renamed->second.volume_id = volume->id().id;
+                    changed                   = true;
+                    it                        = renamed;
+                }
+            }
             if (it == m_faces.end() || it->second.mesh.lock() != volume->get_mesh_shared_ptr())
                 continue;
             SelectedFaces& entry = it->second;
@@ -106,7 +122,7 @@ bool SelectionSnapshotStore::refresh_faces(const Model& model)
                 entry.instance_index = object->instances.empty() ? -1 : 0;
                 changed              = true;
             }
-            kept.emplace(it->first, std::move(entry));
+            kept.emplace(entry.volume_id, std::move(entry));
         }
     }
     changed |= kept.size() != m_faces.size();

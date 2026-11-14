@@ -167,10 +167,26 @@ TEST_CASE("Selection store drops face selections that no longer match the model"
         CHECK(snapshot.faces[0].triangles == std::vector<int>{4});
     }
 
-    SECTION("deleting down to one part drops the selection of the part that is left")
+    SECTION("the last part left keeps its selection under the new id the model gives it")
     {
-        // ModelObject::delete_volume gives the last remaining volume a new id.
+        const size_t old_id = scene.object->volumes[1]->id().id;
         scene.object->delete_volume(0);
+        REQUIRE(scene.object->volumes[0]->id().id != old_id);
+        CHECK(store.refresh_faces(scene.model));
+        const SelectionSnapshot snapshot = store.snapshot();
+        REQUIRE(snapshot.faces.size() == 1);
+        CHECK(snapshot.faces[0].volume_id == scene.object->volumes[0]->id().id);
+        CHECK(snapshot.faces[0].volume_index == 0);
+        CHECK(snapshot.faces[0].triangles == std::vector<int>{4});
+        CHECK(store.face_triangles(scene.object->volumes[0]->id().id, scene.object->volumes[0]->get_mesh_shared_ptr()) ==
+              std::vector<int>{4});
+        CHECK_FALSE(store.refresh_faces(scene.model));
+    }
+
+    SECTION("the last part left loses its selection when its mesh was replaced as well")
+    {
+        scene.object->delete_volume(0);
+        scene.object->volumes[0]->set_mesh(make_cube(1.0, 1.0, 1.0));
         CHECK(store.refresh_faces(scene.model));
         CHECK(store.snapshot().faces.empty());
     }
