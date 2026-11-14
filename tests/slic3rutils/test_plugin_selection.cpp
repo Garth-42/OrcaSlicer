@@ -157,12 +157,22 @@ TEST_CASE("Selection store drops face selections that no longer match the model"
 
     SECTION("a deleted part loses its selection and the others are reindexed")
     {
+        // A third part, so that two remain and the survivors keep their ids.
+        scene.object->add_volume(make_cube(2.0, 2.0, 2.0));
         scene.object->delete_volume(0);
         CHECK(store.refresh_faces(scene.model));
         const SelectionSnapshot snapshot = store.snapshot();
         REQUIRE(snapshot.faces.size() == 1);
         CHECK(snapshot.faces[0].volume_index == 0);
         CHECK(snapshot.faces[0].triangles == std::vector<int>{4});
+    }
+
+    SECTION("deleting down to one part drops the selection of the part that is left")
+    {
+        // ModelObject::delete_volume gives the last remaining volume a new id.
+        scene.object->delete_volume(0);
+        CHECK(store.refresh_faces(scene.model));
+        CHECK(store.snapshot().faces.empty());
     }
 
     SECTION("an emptied model loses everything")

@@ -51,7 +51,9 @@ one instance per process, as there is one `Plater`.
   when it was made, and the mesh its indices refer to (a `weak_ptr`).
 
 A face entry is dropped when its part no longer exists or its mesh was replaced (simplify,
-cut, repair, mesh boolean, reload from disk, a new or reopened project). The indices of
+cut, repair, mesh boolean, reload from disk, a new or reopened project). Entries are
+matched by part id, so one is also dropped when the model gives its part a new id, as
+`ModelObject::delete_volume` does for the last part left in an object. The indices of
 the remaining entries are refreshed when objects or parts are reordered. This check,
 `refresh_faces`, runs whenever the Prepare canvas reloads its scene.
 
