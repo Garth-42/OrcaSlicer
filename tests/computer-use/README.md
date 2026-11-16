@@ -20,9 +20,9 @@ Everything a plan needs is in this folder; the box does not need git.
 |---|---|
 | `testbox.yml` | Machine-readable install, launch and environment settings |
 | `_template.md` | Start a new plan from this |
-| `smoke.md` | Under 5 minutes: starts, loads a model, slices, exits |
+| `smoke.md` | About 5 minutes: starts, loads a model, slices, exits |
 | `01-*.md`, `02-*.md`, ... | Full plans, one flow each |
-| `data/` | Input files the plans load |
+| `data/` | Input files the plans load. In `test-plans.zip` it also holds `orca_selection_plugin_any.py`, copied from `sandboxes/` by the workflow |
 
 ## Rules for the session running a plan
 
@@ -34,8 +34,19 @@ Everything a plan needs is in this folder; the box does not need git.
   still allows it. Do not try to fix anything.
 - A label or position that differs slightly from the plan is not a failure: use the
   closest match and note the difference.
-- Hold a mouse button down for about a quarter of a second when clicking a button inside
-  the 3D view. Those buttons are drawn by the 3D view and can miss a faster click.
+- Everything drawn inside the 3D view (tool buttons, tool panels, notification close
+  buttons, the plate's right-click menu) misses quick clicks. Press the mouse button, hold
+  it about a third of a second, then release. Before right-clicking the plate, move the
+  mouse to a new spot first.
+- Tooltips of the tool buttons do not show up in screenshots. Identify a tool by the panel
+  that opens when its button is clicked.
+- The first start takes 60 to 90 seconds on a box without a GPU. Wait; do not start the
+  app a second time.
+- Maximize the window. The object list is in the left side bar under the **Objects**
+  toggle of the **Process** section.
+- To rename an object, click its name in the object list, wait a second, then click the
+  name again slowly. A double-click only zooms the view.
+- Close the app with its close button or Ctrl+Q.
 - If the app crashes or hangs past the plan's `timeout_minutes`, record the step, collect
   the folders listed under `logs` in `testbox.yml`, and stop the plan.
 - Attach the newest log file to the report for every plan, pass or fail.
@@ -51,8 +62,8 @@ Everything a plan needs is in this folder; the box does not need git.
 - Put input files in `data/` and list them under `test_data` in the front matter.
 - Keep `preconditions` to things the session can check or arrange by itself.
 
-## What has not been checked on screen
+## How far the plans have been checked on screen
 
-The labels in these plans were taken from the source code. The first-run setup wizard in
-particular is a web page whose wording was not read; its steps are written loosely.
-Correct the plans after the first real run.
+`smoke` and plans 01 to 04 were run once on the Windows test box and corrected from that
+run. The setup wizard's pages after the first one are still described loosely. Plan 05
+has not been run; its labels come from the source code and from a run on macOS.

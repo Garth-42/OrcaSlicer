@@ -17,8 +17,8 @@ None.
 
 | # | Action | Expected result | Screenshot? |
 |---|---|---|---|
-| 1 | Start the app with the launch command from `testbox.yml` | The setup wizard is shown | y |
-| 2 | Page by page, note the title of each wizard page and press its forward button. Tick the first printer offered if a page requires one. Decline plug-in installation and login | Each page advances. The wizard ends at the main window | y, each page |
+| 1 | Start the app with the launch command from `testbox.yml` and wait up to 90 seconds | A "Setup Wizard" dialog reading "Welcome to Orca Slicer" is shown in front of the main window | y |
+| 2 | Press **Get Started**. Page by page, note the title of each wizard page and press its forward button. When printers are offered, tick one **without** "Belt" in its name. Decline plug-in installation and login | Each page advances. The wizard ends at the main window | y, each page |
 | 3 | Look at the top of the window | Tabs **Prepare** and **Preview** are present, and **Prepare** is active | y |
 | 4 | Look at the left side bar | It shows a **Printer** section with a printer name and a **Filament** section with at least one filament | y |
 | 5 | Open **File > Import > Import 3MF/STL/STEP/SVG/OBJ/AMF...** and choose `data\cube_20mm.stl` | One cube is on the plate; the object list shows one object | y |
@@ -36,7 +36,7 @@ All steps pass and no error dialog appeared.
 
 ## Known flaky areas
 
-- Step 2: wizard wording and page count were not checked on screen.
+- Step 2: only the wizard's first page is known; note the others as you see them.
 - Steps 6 to 9: with software OpenGL the 3D view can lag by a second or two. Wait for the
   picture to settle before judging.
 - Step 8: `A` only arranges when the 3D view has keyboard focus. Click the plate first.
