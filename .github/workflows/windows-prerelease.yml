@@ -1,7 +1,8 @@
 name: Windows pre-release (test box)
 
-# Builds the Windows x64 app with the regular build chain and publishes it as a rolling
-# pre-release, nightly-<branch-slug>, for the computer-use test box (tests/computer-use/).
+# Builds the Windows x64 app with the regular build chain, runs its unit tests, and publishes
+# it as a rolling pre-release, nightly-<branch-slug>, for the computer-use test box
+# (tests/computer-use/).
 # The box downloads release assets anonymously; workflow artifacts would need a token.
 on:
   push:
@@ -36,6 +37,20 @@ jobs:
       arch: x64
       compiler: clang
     secrets: inherit
+
+  # The build uploads its unit tests; they run as build_all.yml runs them. The release does
+  # not wait for them.
+  unit_tests:
+    name: Windows x64
+    needs: build
+    if: ${{ !cancelled() && needs.build.result == 'success' }}
+    permissions:
+      actions: write
+      contents: read
+    uses: ./.github/workflows/unit_tests.yml
+    with:
+      os: windows-latest
+      artifact: ${{ github.sha }}-tests-windows-x64
 
   publish:
     name: Publish pre-release

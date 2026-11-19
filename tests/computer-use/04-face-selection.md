@@ -20,7 +20,7 @@ Create the folder `C:\TestRuns\{run_id}\out` if it does not exist.
 |---|---|---|---|
 | 1 | Start the app and maximize the window. Right-click the plate, choose **Add Primitive**, then **Cylinder**; accept the size dialog. Add a **Cube** the same way | Two objects stand side by side on the plate | n |
 | 2 | Save the project as `C:\TestRuns\{run_id}\out\faces.3mf` | The title shows no unsaved marker | n |
-| 3 | Click the cylinder. In the row of tool buttons above the 3D view, click the button after the three paint tools (support, seam, fuzzy skin). If another tool's panel opens, close it and try the next button | A small panel opens with four tool icons, a line "0 triangles selected" and buttons **Clear**, **Clear all**, **Done** | y |
+| 3 | Click the cylinder. In the row of tool buttons above the 3D view, click the button right after the three paint tools (support, seam, fuzzy skin) and before the star-shaped Painted Modifier button. If another tool's panel opens, close it and try the next button | A small panel opens with four tool icons, a line "0 triangles selected" and buttons **Clear**, **Clear all**, **Done** | y |
 | 4 | Choose the **Triangle** tool icon and click once on the flat top of the cylinder | One triangle turns orange; the panel says "1 triangle selected" | y |
 | 5 | Hold Shift and click the same triangle | Nothing is orange; the panel says "0 triangles selected" | n |
 | 6 | Choose the **Fill** tool icon and click the curved side of the cylinder. Note the count in the panel | The whole curved side is orange; the flat top is not | y |

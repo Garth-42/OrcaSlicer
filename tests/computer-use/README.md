@@ -38,8 +38,12 @@ Everything a plan needs is in this folder; the box does not need git.
   buttons, the plate's right-click menu) misses quick clicks. Press the mouse button, hold
   it about a third of a second, then release. Before right-clicking the plate, move the
   mouse to a new spot first.
-- Tooltips of the tool buttons do not show up in screenshots. Identify a tool by the panel
-  that opens when its button is clicked.
+- Tooltips of the tool buttons rarely show up in screenshots. Identify a tool by the panel
+  that opens when its button is clicked. Face selection comes right after the fuzzy skin
+  painting button; on a single-extruder printer the star-shaped Painted Modifier button
+  follows it (on multi-material printers the color painting button sits between them).
+- Use a desktop at least 900 pixels high (`display` in `testbox.yml`). Dialogs such as
+  **Plugins** do not fit a smaller screen and their title bar ends up off-screen.
 - The first start takes 60 to 90 seconds on a box without a GPU. Wait; do not start the
   app a second time.
 - Maximize the window. The object list is in the left side bar under the **Objects**
@@ -64,6 +68,5 @@ Everything a plan needs is in this folder; the box does not need git.
 
 ## How far the plans have been checked on screen
 
-`smoke` and plans 01 to 04 were run once on the Windows test box and corrected from that
-run. The setup wizard's pages after the first one are still described loosely. Plan 05
-has not been run; its labels come from the source code and from a run on macOS.
+`smoke` and plans 01 to 05 were each run once on the Windows test box and corrected from
+those runs. The setup wizard's pages after the first one are still described loosely.

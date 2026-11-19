@@ -28,11 +28,27 @@ launch:
   # Run in the interactive desktop session of the local user "claude", never as SYSTEM.
   run_as: claude
   main_window_title_contains: OrcaSlicer
+  # Computer use starts apps by name and cannot find a portable exe. Create a Start Menu
+  # shortcut with this name that runs exe with args in working_dir. A per-user shortcut is
+  # enough (%APPDATA%\Microsoft\Windows\Start Menu\Programs); an all-users one needs admin.
+  # Do not start the app from a scheduled task: that failed once with 0xC0000142.
+  start_menu_shortcut: OrcaSlicer Test
+
+display:
+  # The Plugins dialog opens at 900 x 820; on a 768-pixel-high desktop its title bar is
+  # off-screen. A larger desktop also keeps the tool row above the 3D view uncramped.
+  minimum_height: 900
+  recommended_resolution: 1920x1080
 
 logs:
   - C:\TestRuns\{run_id}\data\log
   # Used only when the app is started without --datadir:
   - "%APPDATA%\\OrcaSlicer\\log"
+
+crash_evidence:
+  # Neither is written by the app itself. Check both when a plan fails or the app exits early.
+  - "%LOCALAPPDATA%\\CrashDumps"   # filled only when Windows Error Reporting local dumps are enabled
+  - "Windows Application event log: Application Error and Windows Error Reporting entries for orca-slicer.exe"
 
 settings_dirs:
   - C:\TestRuns\{run_id}\data
